@@ -5,7 +5,6 @@ go 1.13
 require (
 	github.com/DataDog/datadog-go v2.2.0+incompatible
 	github.com/armon/go-metrics v0.0.0-20190430140413-ec5e00d3c878 // indirect
-	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.9.0
 	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1

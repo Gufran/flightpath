@@ -34,6 +34,8 @@ type XDS struct {
 	Consul            *consul.Client
 	Cache             cache.SnapshotCache
 	ProxyListenerPort int
+	WithDebugServer   bool
+	DebugServerPort   int
 }
 
 func (x *XDS) Start(ctx context.Context) {
@@ -49,6 +51,10 @@ func (x *XDS) Start(ctx context.Context) {
 	go source.DiscoverClusters(clusterChan, cleanupChan, cerrs)
 	go source.WatchTLS(x.ServiceName, tlsChan, terrs)
 	go trackErrors(ctx, cerrs, terrs)
+
+	if x.WithDebugServer {
+		StartDebugServer(x.DebugServerPort, x.ProxyNodeName, x.Cache)
+	}
 
 	go synchronize(ctx, x.Cache, x.ProxyNodeName, x.ProxyListenerPort, clusterChan, tlsChan, cleanupChan)
 }
@@ -154,7 +160,7 @@ func putCache(snc cache.SnapshotCache, node string, proxyPort int, clusters []ca
 			}
 		}
 
-		vhosts = append(vhosts, buildVirtualHosts(service.Name(), service.Endpoints())...)
+		vhosts = append(vhosts, buildVirtualHosts(service.Name(), service.Endpoints(), proxyPort)...)
 
 		clusterResource = append(clusterResource, clusterConfig)
 		endpointResource = append(endpointResource, &envoyapiv2.ClusterLoadAssignment{
@@ -341,7 +347,6 @@ func buildFilterChains() ([]*listener.FilterChain, error) {
 	//   as a separate filterchain?
 	return []*listener.FilterChain{
 		{
-			Name: wellknown.HTTPConnectionManager,
 			Filters: []*listener.Filter{
 				{
 					Name: wellknown.HTTPConnectionManager,
@@ -399,13 +404,19 @@ func buildTlsCertChain(tls catalog.TLSInfo) *auth.TlsCertificate {
 	}
 }
 
-func buildVirtualHosts(clusterName string, endpoints []catalog.Endpoint) []*route.VirtualHost {
+func buildVirtualHosts(clusterName string, endpoints []catalog.Endpoint, proxyPort int) []*route.VirtualHost {
 	var vhs []*route.VirtualHost
 	for _, e := range endpoints {
 		for domain, paths := range e.RoutingInfo() {
 			vhs = append(vhs, &route.VirtualHost{
-				Name:                       e.Name(),
-				Domains:                    []string{domain},
+				Name: e.Name(),
+				// TODO: Envoy fails to match the domain if the client
+				//   sends the Host header with port in it. for the time
+				//   we match on the bare domain as well as on the domain
+				//   with the port number on it, but this should be removed
+				//   when the behaviour is improved in Envoy.
+				// See: https://github.com/envoyproxy/envoy/issues/886
+				Domains:                    []string{domain, fmt.Sprintf("%s:%d", domain, proxyPort)},
 				Routes:                     buildVirtualHostRoutes(clusterName, e.Name(), paths),
 				IncludeRequestAttemptCount: true,
 			})

@@ -16,14 +16,16 @@ import (
 )
 
 type Config struct {
-	ListenPort      int
-	ConsulProto     string
-	ConsulHost      string
-	ConsulPort      int
-	ConsulToken     string
-	SelfName        string
-	NodeName        string
-	EnvoyListenPort int
+	ListenPort       int
+	ConsulProto      string
+	ConsulHost       string
+	ConsulPort       int
+	ConsulToken      string
+	SelfName         string
+	NodeName         string
+	EnvoyListenPort  int
+	StartDebugServer bool
+	DebugServerPort  int
 }
 
 func (c *Config) getConsulClient() (*consul.Client, error) {
@@ -57,6 +59,9 @@ func Start(ctx context.Context, config *Config) (func(), error) {
 		ServiceName:       config.SelfName,
 		ProxyNodeName:     config.NodeName,
 		ProxyListenerPort: config.EnvoyListenPort,
+
+		WithDebugServer: config.StartDebugServer,
+		DebugServerPort: config.DebugServerPort,
 	}
 
 	x.Start(ctx)
