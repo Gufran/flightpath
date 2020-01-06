@@ -8,18 +8,29 @@ import (
 	"time"
 )
 
+type ServiceFinder interface {
+	Services(*api.QueryOptions) (map[string][]string, *api.QueryMeta, error)
+	Service(string, string, *api.QueryOptions) ([]*api.CatalogService, *api.QueryMeta, error)
+}
+
+type CertFinder interface {
+	ConnectCALeaf(string, *api.QueryOptions) (*api.LeafCert, *api.QueryMeta, error)
+}
+
 // Catalog interacts with consul and keeps a list
 // of currently valid entities
 type Catalog struct {
-	ctx    context.Context
-	client *api.Client
+	ctx     context.Context
+	catalog ServiceFinder
+	connect CertFinder
 }
 
 // New creates a new instance of Catalog
 func New(ctx context.Context, client *api.Client) *Catalog {
 	return &Catalog{
-		ctx:    ctx,
-		client: client,
+		ctx:     ctx,
+		catalog: client.Catalog(),
+		connect: client.Agent(),
 	}
 }
 
@@ -45,7 +56,7 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 			return
 
 		default:
-			services, meta, err := c.client.Catalog().Services(qopts.WithContext(c.ctx))
+			services, meta, err := c.catalog.Services(qopts.WithContext(c.ctx))
 			if err != nil {
 				errs <- err
 				time.Sleep(3 * time.Second)
@@ -128,7 +139,7 @@ func (c *Catalog) watchService(ctx context.Context, name string, isSidecar bool,
 			return
 
 		default:
-			nodes, meta, err := c.client.Catalog().Service(name, "", qopts.WithContext(c.ctx))
+			nodes, meta, err := c.catalog.Service(name, "", qopts.WithContext(c.ctx))
 			if err != nil {
 				errs <- err
 				time.Sleep(3 * time.Second)
@@ -169,12 +180,12 @@ func (c *Catalog) filterConnectTargets(candidates map[string]bool) (map[string]b
 	}
 
 	results := make(map[string]bool, len(candidates))
-	for service:= range candidates {
+	for service := range candidates {
 		results[service] = false
 	}
 
 	for name := range candidates {
-		services, _, err := c.client.Catalog().Service(name, "", qopts.WithContext(c.ctx))
+		services, _, err := c.catalog.Service(name, "", qopts.WithContext(c.ctx))
 		if err != nil {
 			return nil, err
 		}

@@ -53,7 +53,7 @@ func (c *Catalog) WatchTLS(service string, cert chan<- TLSInfo, errs chan<- erro
 			log.Println("Shutting down Leaf Certificate watcher because the context is done")
 			return
 		default:
-			resp, meta, err := c.client.Agent().ConnectCALeaf(service, qopts.WithContext(c.ctx))
+			resp, meta, err := c.connect.ConnectCALeaf(service, qopts.WithContext(c.ctx))
 			if err != nil {
 				errs <- fmt.Errorf("failed to query consul catalog for leaf certificates. %s", err)
 				break
