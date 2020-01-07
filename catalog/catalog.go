@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const FlightPathTag = "in-flightpath"
+
 type ServiceFinder interface {
 	Services(*api.QueryOptions) (map[string][]string, *api.QueryMeta, error)
 	Service(string, string, *api.QueryOptions) ([]*api.CatalogService, *api.QueryMeta, error)
@@ -58,7 +60,7 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 		default:
 			services, meta, err := c.catalog.Services(qopts.WithContext(c.ctx))
 			if err != nil {
-				errs <- err
+				errs <- fmt.Errorf("failed to fetch list of services from consul catalog. %s", err)
 				time.Sleep(3 * time.Second)
 				break
 			}
@@ -72,7 +74,7 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 			candidates := map[string]bool{}
 			for name, tags := range services {
 				for _, tag := range tags {
-					if tag == "in-flightpath" {
+					if tag == FlightPathTag {
 						candidates[name] = true
 						log.Printf("service %s is marked as a discovery candidate", name)
 						break
