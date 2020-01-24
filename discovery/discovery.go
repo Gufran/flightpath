@@ -3,9 +3,9 @@ package discovery
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 
+	"github.com/Gufran/flightpath/log"
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	sd "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
@@ -14,6 +14,8 @@ import (
 	consul "github.com/hashicorp/consul/api"
 	"google.golang.org/grpc"
 )
+
+var logger = log.New("discovery")
 
 type Config struct {
 	ListenPort       int
@@ -42,9 +44,7 @@ func Start(ctx context.Context, config *Config) (func(), error) {
 		return nil, fmt.Errorf("failed to create consul client. %s", err)
 	}
 
-	// TODO: inject a logger that honors the global
-	//   log level configuration
-	apicache := cache.NewSnapshotCache(false, cache.IDHash{}, &ServerLog{})
+	apicache := cache.NewSnapshotCache(false, cache.IDHash{}, log.NewSrvLogger())
 	xds := dss.NewServer(apicache, nil)
 	server := grpc.NewServer()
 
@@ -80,20 +80,20 @@ func Start(ctx context.Context, config *Config) (func(), error) {
 	go func() {
 		err := server.Serve(listener)
 		if err != nil {
-			log.Printf("GRPC server failed with error: %s", err)
+			logger.WithError(err).Error("GRPC server failed")
 		}
 	}()
 
 	return func() {
 		err := deregisterSelf(cc, sid)
 		if err != nil {
-			log.Printf("failed to deregister the service from consul catalog. %s", err)
+			logger.WithError(err).Error("failed to deregister the service from consul catalog")
 		}
 
 		server.Stop()
 		err = listener.Close()
 		if err != nil {
-			log.Printf("failed to stop the socket listener. %s", err)
+			logger.WithError(err).Error("failed to stop the socket listener")
 		}
 	}, nil
 }

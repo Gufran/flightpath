@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -36,17 +35,17 @@ func (d *DebugServer) ListenAndServe(port int) {
 		Handler: mux,
 	}
 
-	log.Printf("starting debug server on %s", addr)
+	logger.WithField("addr", addr).Info("starting debug server")
 	err := server.ListenAndServe()
 	if err != nil {
-		log.Printf("debug http server crashed with error. %s", err)
+		logger.WithError(err).Printf("debug http server crashed")
 	}
 }
 
 func (d *DebugServer) sendResp(resp http.ResponseWriter, kind string) {
 	snap, err := d.state.GetSnapshot(d.node)
 	if err != nil {
-		log.Printf("failed to retrieve snapshot from XDS cache. %s", err)
+		logger.WithError(err).Error("failed to retrieve snapshot from XDS cache")
 		http.Error(resp, "failed to retrieve state", http.StatusInternalServerError)
 		return
 	}
@@ -73,7 +72,7 @@ func (d *DebugServer) sendResp(resp http.ResponseWriter, kind string) {
 	enc.SetIndent("", "  ")
 	err = enc.Encode(data)
 	if err != nil {
-		log.Printf("Debug server failed to send response. %s", err)
+		logger.WithError(err).Error("Debug server failed to send response")
 	}
 }
 

@@ -21,7 +21,6 @@ import (
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	consul "github.com/hashicorp/consul/api"
-	"log"
 	"strings"
 	"time"
 )
@@ -39,7 +38,7 @@ type XDS struct {
 }
 
 func (x *XDS) Start(ctx context.Context) {
-	source := catalog.New(ctx, x.Consul)
+	source := catalog.NewCatalog(ctx, x.Consul)
 
 	clusterChan := make(chan catalog.ClusterInfo)
 	tlsChan := make(chan catalog.TLSInfo)
@@ -67,10 +66,10 @@ func trackErrors(ctx context.Context, ce, te <-chan error) {
 			return
 
 		case err := <-ce:
-			log.Printf("error is cluster watcher. %s", err)
+			logger.WithError(err).Error("error is cluster watcher")
 
 		case err := <-te:
-			log.Printf("error in TLS watcher. %s", err)
+			logger.WithError(err).Error("error in TLS watcher")
 		}
 	}
 }
@@ -98,14 +97,14 @@ func synchronize(ctx context.Context,
 			return
 
 		case cluster := <-clusters:
-			log.Printf("updating entries for cluster %s", cluster.Name())
+			logger.WithField("cluster", cluster.Name()).Info("updating cluster entry")
 			newClustersList[cluster.Name()] = cluster
 
 		case certs = <-tls:
 		// keep'em up to date
 
 		case name := <-cleanup:
-			log.Printf("received request to remove cluster %s from list", name)
+			logger.WithField("cluster", name).Info("removing cluster from tracked list")
 			if _, ok := newClustersList[name]; ok {
 				delete(newClustersList, name)
 			}
@@ -113,7 +112,7 @@ func synchronize(ctx context.Context,
 		case <-tick:
 			err := putCache(snc, node, proxyPort, clustersList(newClustersList), certs)
 			if err != nil {
-				log.Printf("failed to update cluster information. Keeping the previously known good state. %s", err)
+				logger.WithError(err).Error("failed to update cluster information")
 			}
 		}
 	}
@@ -281,7 +280,16 @@ func buildFilterChains() ([]*listener.FilterChain, error) {
 
 	// See: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log#config-access-log-default-format
 	accessLogger := &accesslogconfig.FileAccessLog{
-		Path: "/dev/stdout",
+		// TODO: make the path configurable.
+		//    systemd messes up with /dev/stdout and /dev/stderr of
+		//    a process and converts them into a socket that streams
+		//    logs to journald. It is not possible to execute `open()`
+		//    on a socket file so the access logger crashes and Envoy
+		//    can't start the listener.
+		//    On a machine without systemd it would be possible to use
+		//    /dev/stdout or /dev/stderr for Access Logging but with
+		//    systemd we have to use a regular file.
+		Path: "/var/log/envoy/access.log",
 		AccessLogFormat: &accesslogconfig.FileAccessLog_JsonFormat{
 			JsonFormat: &structpb.Struct{
 				Fields: map[string]*structpb.Value{

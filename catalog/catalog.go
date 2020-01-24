@@ -3,10 +3,12 @@ package catalog
 import (
 	"context"
 	"fmt"
+	"github.com/Gufran/flightpath/log"
 	"github.com/hashicorp/consul/api"
-	"log"
 	"time"
 )
+
+var logger = log.New("catalog")
 
 const FlightPathTag = "in-flightpath"
 
@@ -27,8 +29,8 @@ type Catalog struct {
 	connect CertFinder
 }
 
-// New creates a new instance of Catalog
-func New(ctx context.Context, client *api.Client) *Catalog {
+// NewCatalog creates a new instance of Catalog
+func NewCatalog(ctx context.Context, client *api.Client) *Catalog {
 	return &Catalog{
 		ctx:     ctx,
 		catalog: client.Catalog(),
@@ -54,7 +56,7 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 	for {
 		select {
 		case <-c.ctx.Done():
-			log.Println("Shutting down the target service watcher because the context is done")
+			logger.Info("cluster discovery loop has shut down")
 			return
 
 		default:
@@ -76,7 +78,7 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 				for _, tag := range tags {
 					if tag == FlightPathTag {
 						candidates[name] = true
-						log.Printf("service %s is marked as a discovery candidate", name)
+						logger.WithField("service", name).Info("found discovery candidate service")
 						break
 					}
 				}
@@ -91,16 +93,22 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 				break
 			}
 
+			logger.WithField("total_candidates", len(candidates)).
+				WithField("candidates", candidates).
+				Debug("candidate list is ready")
+
+			logger.WithField("watchers", mapToSlice(activeWatchers)).
+				Debug("watcher state")
+
 			// Find services that dont' have an active watcher
 			// and start a watcher for them.
 			for name, isSidecar := range candidates {
 				if _, ok := activeWatchers[name]; !ok {
-					log.Printf("starting new watcher for service %s", name)
+					logger.WithField("service", name).Info("starting watcher for service")
+
 					ctx, cancel := context.WithCancel(c.ctx)
 					activeWatchers[name] = cancel
 					go c.watchService(ctx, name, isSidecar, clusters, errs)
-				} else {
-					log.Printf("watcher is already active for %s", name)
 				}
 			}
 
@@ -109,7 +117,7 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 			// their watcher
 			for name, stop := range activeWatchers {
 				if _, ok := candidates[name]; !ok {
-					log.Printf("stopping watcher for service %s", name)
+					logger.WithField("service", name).Info("stopping watcher for service")
 
 					stop()
 					delete(activeWatchers, name)
@@ -118,12 +126,18 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 					// don't end up blocking if the other side is not
 					// able to consume the channel fast enough
 					go func(n string) { cleanup <- n }(name)
-				} else {
-					log.Printf("no active watcher for %#v", name)
 				}
 			}
 		}
 	}
+}
+
+func mapToSlice(m map[string]func()) []string {
+	var r []string
+	for n := range m {
+		r = append(r, n)
+	}
+	return r
 }
 
 func (c *Catalog) watchService(ctx context.Context, name string, isSidecar bool, clusters chan<- ClusterInfo, errs chan<- error) {
@@ -137,7 +151,7 @@ func (c *Catalog) watchService(ctx context.Context, name string, isSidecar bool,
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("Shutting down the service watcher for %s because the context is done", name)
+			logger.WithField("service", name).Infof("service watcher loop has shut down")
 			return
 
 		default:
@@ -202,14 +216,14 @@ func (c *Catalog) filterConnectTargets(candidates map[string]bool) (map[string]b
 			// the target may not be able to receive traffic.
 			// In this case we simply remove the target name
 			// from results list.
-			log.Printf("Service %s is a sidecar proxy for %s, removing %s from candidate list", svc.ServiceName, svc.ServiceProxy.DestinationServiceName, svc.ServiceProxy.DestinationServiceName)
-			log.Printf("Service %s selected as a valid candidate for connect cluster discovery", svc.ServiceName)
+			logger.WithField("service", svc.ServiceName).
+				WithField("sidecar_destination", svc.ServiceProxy.DestinationServiceName).
+				Info("sidecar selected for cluster discovery")
 
 			results[svc.ServiceName] = true
 			delete(results, svc.ServiceProxy.DestinationServiceName)
 		}
 	}
 
-	log.Printf("services selected for cluster discovery: %#v", results)
 	return results, nil
 }
