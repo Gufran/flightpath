@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/Gufran/flightpath/catalog"
+	"github.com/Gufran/flightpath/metrics"
 	envoyapiv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
@@ -44,34 +45,14 @@ func (x *XDS) Start(ctx context.Context) {
 	tlsChan := make(chan catalog.TLSInfo)
 	cleanupChan := make(chan string)
 
-	cerrs := make(chan error)
-	terrs := make(chan error)
-
-	go source.DiscoverClusters(clusterChan, cleanupChan, cerrs)
-	go source.WatchTLS(x.ServiceName, tlsChan, terrs)
-	go trackErrors(ctx, cerrs, terrs)
+	go source.DiscoverClusters(clusterChan, cleanupChan)
+	go source.WatchTLS(x.ServiceName, tlsChan)
 
 	if x.WithDebugServer {
 		StartDebugServer(x.DebugServerPort, x.ProxyNodeName, x.Cache)
 	}
 
 	go synchronize(ctx, x.Cache, x.ProxyNodeName, x.ProxyListenerPort, clusterChan, tlsChan, cleanupChan)
-}
-
-// TODO: expose metrics on errors
-func trackErrors(ctx context.Context, ce, te <-chan error) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case err := <-ce:
-			logger.WithError(err).Error("error is cluster watcher")
-
-		case err := <-te:
-			logger.WithError(err).Error("error in TLS watcher")
-		}
-	}
 }
 
 func synchronize(ctx context.Context,
@@ -89,29 +70,37 @@ func synchronize(ctx context.Context,
 	certs := <-tls
 
 	tick := time.Tick(5 * time.Second)
-	newClustersList := map[string]catalog.ClusterInfo{}
+	knownClusters := map[string]catalog.ClusterInfo{}
 
 	for {
+		metrics.Incr("discovery.sync.loop", nil)
 		select {
 		case <-ctx.Done():
 			return
 
 		case cluster := <-clusters:
 			logger.WithField("cluster", cluster.Name()).Info("updating cluster entry")
-			newClustersList[cluster.Name()] = cluster
+			metrics.Incr("discovery.cluster.update", []string{"cluster:" + cluster.Name()})
+			knownClusters[cluster.Name()] = cluster
 
 		case certs = <-tls:
+			metrics.Incr("discovery.tls.update", nil)
 		// keep'em up to date
 
 		case name := <-cleanup:
+			metrics.Incr("discovery.cluster.cleanup", []string{"cluster:" + name})
 			logger.WithField("cluster", name).Info("removing cluster from tracked list")
-			if _, ok := newClustersList[name]; ok {
-				delete(newClustersList, name)
+			if _, ok := knownClusters[name]; ok {
+				delete(knownClusters, name)
 			}
 
 		case <-tick:
-			err := putCache(snc, node, proxyPort, clustersList(newClustersList), certs)
+			metrics.Incr("discovery.cluster.flush", nil)
+			metrics.GaugeI("discovery.cluster.batch_size", len(knownClusters), nil)
+
+			err := putCache(snc, node, proxyPort, clustersList(knownClusters), certs)
 			if err != nil {
+				metrics.Incr("discovery.cluster.error.flush", nil)
 				logger.WithError(err).Error("failed to update cluster information")
 			}
 		}
@@ -138,7 +127,11 @@ func putCache(snc cache.SnapshotCache, node string, proxyPort int, clusters []ca
 		endpointResource []cache.Resource
 	)
 
-	var vhosts []*route.VirtualHost
+	defer metrics.Timed("discovery.cache.put_ns", time.Now(), nil)
+
+	vhosts := vhostPool{
+		mappings: map[string][]vhostInfo{},
+	}
 
 	envoyListener, err := buildListener("flightpath", proxyPort)
 	if err != nil {
@@ -159,7 +152,7 @@ func putCache(snc cache.SnapshotCache, node string, proxyPort int, clusters []ca
 			}
 		}
 
-		vhosts = append(vhosts, buildVirtualHosts(service.Name(), service.Endpoints(), proxyPort)...)
+		vhosts.add(service)
 
 		clusterResource = append(clusterResource, clusterConfig)
 		endpointResource = append(endpointResource, &envoyapiv2.ClusterLoadAssignment{
@@ -171,9 +164,14 @@ func putCache(snc cache.SnapshotCache, node string, proxyPort int, clusters []ca
 	routeResource = []cache.Resource{
 		&envoyapiv2.RouteConfiguration{
 			Name:         "upstream",
-			VirtualHosts: vhosts,
+			VirtualHosts: vhosts.collect(proxyPort),
 		},
 	}
+
+	metrics.GaugeI("discovery.cache.put.clusters", len(clusterResource), nil)
+	metrics.GaugeI("discovery.cache.put.endpoints", len(endpointResource), nil)
+	metrics.GaugeI("discovery.cache.put.routes", len(routeResource), nil)
+	metrics.GaugeI("discovery.cache.put.listener", len(listenerResource), nil)
 
 	snap := cache.NewSnapshot(catalog.Hash(clusters), endpointResource, clusterResource, routeResource, listenerResource)
 	return snc.SetSnapshot(node, snap)
@@ -412,27 +410,6 @@ func buildTlsCertChain(tls catalog.TLSInfo) *auth.TlsCertificate {
 	}
 }
 
-func buildVirtualHosts(clusterName string, endpoints []catalog.Endpoint, proxyPort int) []*route.VirtualHost {
-	var vhs []*route.VirtualHost
-	for _, e := range endpoints {
-		for domain, paths := range e.RoutingInfo() {
-			vhs = append(vhs, &route.VirtualHost{
-				Name: e.Name(),
-				// TODO: Envoy fails to match the domain if the client
-				//   sends the Host header with port in it. for the time
-				//   we match on the bare domain as well as on the domain
-				//   with the port number on it, but this should be removed
-				//   when the behaviour is improved in Envoy.
-				// See: https://github.com/envoyproxy/envoy/issues/886
-				Domains:                    []string{domain, fmt.Sprintf("%s:%d", domain, proxyPort)},
-				Routes:                     buildVirtualHostRoutes(clusterName, e.Name(), paths),
-				IncludeRequestAttemptCount: true,
-			})
-		}
-	}
-	return vhs
-}
-
 func buildRouteMatchSpec(r string) *route.RouteMatch {
 	matcher := &route.RouteMatch{
 		CaseSensitive: &wrappers.BoolValue{
@@ -462,6 +439,68 @@ func buildClusterRoutingAction(cluster string) *route.Route_Route {
 			},
 		},
 	}
+}
+
+type vhostInfo struct {
+	clusterName  string
+	endpointName string
+	paths        []string
+}
+type vhostPool struct {
+	mappings map[string][]vhostInfo
+}
+
+func (v *vhostPool) add(c catalog.ClusterInfo) {
+	for _, e := range c.Endpoints() {
+		for domain, paths := range e.RoutingInfo() {
+			v.mappings[domain] = append(v.mappings[domain], vhostInfo{
+				clusterName:  c.Name(),
+				endpointName: e.Name(),
+				paths:        paths,
+			})
+		}
+	}
+}
+
+func (v *vhostPool) collect(proxyPort int) []*route.VirtualHost {
+	var vhs []*route.VirtualHost
+	for domain, routes := range v.mappings {
+		target := &route.VirtualHost{
+			Name:                       "vh-" + domain,
+			Domains:                    []string{domain, fmt.Sprintf("%s:%d", domain, proxyPort)},
+			IncludeRequestAttemptCount: true,
+			Routes:                     []*route.Route{},
+			RetryPolicy: &route.RetryPolicy{
+				RetryOn:                       "gateway-error",
+				HostSelectionRetryMaxAttempts: 3,
+				NumRetries: &wrappers.UInt32Value{
+					Value: 3,
+				},
+				PerTryTimeout: &duration.Duration{
+					Seconds: 1,
+				},
+				RetryHostPredicate: []*route.RetryPolicy_RetryHostPredicate{
+					{
+						Name: "envoy.retry_host_predicates.previous_hosts",
+					},
+				},
+			},
+		}
+
+		for _, vhinfo := range routes {
+			// TODO: Envoy fails to match the domain if the client
+			//   sends the Host header with port in it. for the time
+			//   we match on the bare domain as well as on the domain
+			//   with the port number on it, but this should be removed
+			//   when the behaviour is improved in Envoy.
+			// See: https://github.com/envoyproxy/envoy/issues/886
+			target.Routes = append(target.Routes, buildVirtualHostRoutes(vhinfo.clusterName, vhinfo.endpointName, vhinfo.paths)...)
+		}
+
+		vhs = append(vhs, target)
+	}
+
+	return vhs
 }
 
 func buildVirtualHostRoutes(clusterName string, endpointName string, paths []string) []*route.Route {
