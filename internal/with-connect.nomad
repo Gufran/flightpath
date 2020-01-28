@@ -16,7 +16,7 @@ job "with-connect" {
       }
 
       meta {
-        flightpath-route-main = "with-connect.app.dev"
+        flightpath-route-main = "with-connect.app.local"
       }
     }
 
