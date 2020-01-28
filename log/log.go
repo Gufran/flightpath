@@ -9,6 +9,7 @@ import (
 var _ srvlog.Logger = &ServerLog{}
 
 var formatter string
+var Global *logrus.Entry
 
 // Init sets up the default log level and log output
 // format on global logrus instance.
@@ -23,11 +24,13 @@ func Init(level string, fmtname string) {
 		logrus.WithFields(logrus.Fields{
 			"specified": level,
 			"default":   "INFO",
-		}).Warnf("invalid log level specified. using default value", )
+		}).Warnf("invalid log level specified. using default value")
 		lvl = logrus.InfoLevel
 	}
 
 	logrus.SetLevel(lvl)
+
+	Global = New("global")
 }
 
 // New creates a new logrus instance with preconfigured

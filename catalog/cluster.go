@@ -39,7 +39,7 @@ func Hash(l []ClusterInfo) string {
 	sort.Strings(ids)
 	cid := strings.Join(ids, "")
 
-	return fmt.Sprintf("%x", sha1.Sum([]byte(cid)))
+	return fmt.Sprintf("%x", sha1.Sum([]byte(cid)))[:10]
 }
 
 func (c *Cluster) Hash() string {
@@ -50,7 +50,7 @@ func (c *Cluster) Hash() string {
 	sort.Strings(ids)
 	cid := strings.Join(ids, "")
 
-	return fmt.Sprintf("%x", sha1.Sum([]byte(cid)))
+	return fmt.Sprintf("%x", sha1.Sum([]byte(cid)))[:10]
 }
 
 func (c *Cluster) Name() string {

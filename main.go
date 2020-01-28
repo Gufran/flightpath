@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"github.com/Gufran/flightpath/log"
+	"github.com/Gufran/flightpath/metrics"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
@@ -14,8 +15,13 @@ import (
 var config = &discovery.Config{}
 
 var (
-	logLevel string
-	logFormat string
+	logLevel   string
+	logFormat  string
+
+	enableStatsd bool
+	statsdAddr string
+	statsdPort int
+	statsdNS string
 )
 
 func init() {
@@ -29,6 +35,12 @@ func init() {
 	flag.IntVar(&config.EnvoyListenPort, "envoy.listen.port", 9292, "Port used by Envoy Listener")
 	flag.StringVar(&logLevel, "log.level", "INFO", "Set log verbosity. Valid options are trace, debug, error, warn, info, fatal and panic")
 	flag.StringVar(&logFormat, "log.format", "json", "Format of the log message. Valid options are json and plain")
+	flag.BoolVar(&enableStatsd, "dogstatsd", false, "Enable publishing metrics to dogstatsd agent")
+	flag.StringVar(&statsdAddr, "dogstatsd.addr", "127.0.0.1", "Address of the dogstatsd agent")
+	flag.IntVar(&statsdPort, "dogstatsd.port", 8125, "Port of the dogstatsd agent")
+	flag.StringVar(&statsdNS, "dogstatsd.namespace", "flightpath", "Metrics namespace for dogstatsd")
+	flag.BoolVar(&config.StartDebugServer, "debug", true, "Start debug HTTP server on loopback interface")
+	flag.IntVar(&config.DebugServerPort, "debug.port", 7180, "Network port to use for debug HTTP server")
 	flag.Parse()
 }
 
@@ -36,6 +48,13 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	log.Init(logLevel, logFormat)
+
+	if enableStatsd {
+		err := metrics.Init(statsdAddr, statsdPort, statsdNS)
+		if err != nil {
+			log.Global.WithError(err).Errorf("failed to initialize metrics subsystem")
+		}
+	}
 
 	exit := make(chan os.Signal)
 	signal.Notify(exit, os.Interrupt)

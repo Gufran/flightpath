@@ -1,7 +1,7 @@
 package catalog
 
 import (
-	"fmt"
+	"github.com/Gufran/flightpath/metrics"
 	"github.com/hashicorp/consul/api"
 	"log"
 	"time"
@@ -39,7 +39,7 @@ func (t *tls) ServiceName() string {
 	return t.service
 }
 
-func (c *Catalog) WatchTLS(service string, cert chan<- TLSInfo, errs chan<- error) {
+func (c *Catalog) WatchTLS(service string, cert chan<- TLSInfo) {
 	qopts := &api.QueryOptions{
 		AllowStale:        false,
 		RequireConsistent: true,
@@ -48,6 +48,7 @@ func (c *Catalog) WatchTLS(service string, cert chan<- TLSInfo, errs chan<- erro
 	}
 
 	for {
+		metrics.Incr("catalog.tls.loop", nil)
 		select {
 		case <-c.ctx.Done():
 			log.Println("Shutting down Leaf Certificate watcher because the context is done")
@@ -55,15 +56,20 @@ func (c *Catalog) WatchTLS(service string, cert chan<- TLSInfo, errs chan<- erro
 		default:
 			resp, meta, err := c.connect.ConnectCALeaf(service, qopts.WithContext(c.ctx))
 			if err != nil {
-				errs <- fmt.Errorf("failed to query consul catalog for leaf certificates. %s", err)
+				metrics.Incr("catalog.tls.error.fetch", nil)
+				logger.WithError(err).Error("failed to fetch TLS leaf certificates")
 				break
 			}
 
 			if meta.LastIndex <= qopts.WaitIndex {
+				metrics.Incr("catalog.tls.noop", nil)
 				break
 			}
 
 			qopts.WaitIndex = meta.LastIndex
+
+			metrics.Incr("catalog.tls.updated", nil)
+
 			cert <- &tls{
 				serial:  resp.SerialNumber,
 				certPem: resp.CertPEM,
