@@ -158,7 +158,7 @@ func (c *Catalog) watchService(ctx context.Context, name string, isSidecar bool,
 
 	tags := []string{
 		"service:"+name,
-		fmt.Sprintf("is_sidecar:%s", isSidecar),
+		fmt.Sprintf("is_sidecar:%v", isSidecar),
 	}
 
 	for {

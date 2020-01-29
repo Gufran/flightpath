@@ -45,19 +45,12 @@ func TestCatalog_WatchTLS(t *testing.T) {
 	}
 
 	certChan := make(chan TLSInfo)
-	errChan := make(chan error)
-
 	doneChan := make(chan struct{})
 
 	go func() {
-		catalog.WatchTLS(serviceName, certChan, errChan)
+		catalog.WatchTLS(serviceName, certChan)
 		doneChan <- struct{}{}
 	}()
-
-	err := <-errChan
-	if err.Error() != "failed to query consul catalog for leaf certificates. error" {
-		t.Errorf("unexpected error message %q", err)
-	}
 
 	cert := <-certChan
 	if cert.Cert() != "cert material" {
@@ -69,7 +62,6 @@ func TestCatalog_WatchTLS(t *testing.T) {
 	}
 
 	close(certChan)
-	close(errChan)
 
 	cancel()
 	<-doneChan

@@ -2,7 +2,7 @@ package catalog
 
 import (
 	"github.com/hashicorp/consul/api"
-	"reflect"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -12,7 +12,7 @@ func TestHash(t *testing.T) {
 		hash     string
 	}{
 		{
-			hash: "6d184a4d36feb2f642c738f1d212a2552bbc13b3",
+			hash: "c08f6090b8",
 			clusters: []ClusterInfo{
 				&Cluster{
 					services: []*api.CatalogService{
@@ -60,7 +60,7 @@ func TestCluster_Hash(t *testing.T) {
 					{ID: "four"},
 				},
 			},
-			hash: "fcb13b7761df6dd7a574c02208f40a7e933106ce",
+			hash: "fcb13b7761",
 		},
 		{
 			cluster: &Cluster{
@@ -69,7 +69,7 @@ func TestCluster_Hash(t *testing.T) {
 					{ID: "two"},
 				},
 			},
-			hash: "30ae97492ce1da88d0e7117ace0a60a6f9e1e0bc",
+			hash: "30ae97492c",
 		},
 		{
 			cluster: &Cluster{
@@ -78,7 +78,7 @@ func TestCluster_Hash(t *testing.T) {
 					{ID: "four"},
 				},
 			},
-			hash: "257c7fd00c8e62af9a17fcc5d52f566c7d5c5b75",
+			hash: "257c7fd00c",
 		},
 	}
 
@@ -173,9 +173,7 @@ func TestGetRoutingInfo(t *testing.T) {
 
 	for idx, test := range tests {
 		result := getRoutingInfo(&test.service)
-		if !reflect.DeepEqual(result, test.expect) {
-			t.Errorf("case %d: unexpected result. Expected %#v != Result %#v", idx, test.expect, result)
-		}
+		assert.Equal(t, result, test.expect, "Case %d", idx)
 	}
 }
 
@@ -282,8 +280,6 @@ func TestCluster_Endpoints(t *testing.T) {
 
 	for idx, test := range tests {
 		result := test.cluster.Endpoints()
-		if !reflect.DeepEqual(result, test.expect) {
-			t.Errorf("case %d: unexpected %#v, expected %#v", idx, result, test.expect)
-		}
+		assert.Equal(t, result, test.expect, "Case %d", idx )
 	}
 }
