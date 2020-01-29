@@ -29,13 +29,14 @@ import (
 const XdsClusterName = "xds_cluster"
 
 type XDS struct {
-	ServiceName       string
-	ProxyNodeName     string
-	Consul            *consul.Client
-	Cache             cache.SnapshotCache
-	ProxyListenerPort int
-	WithDebugServer   bool
-	DebugServerPort   int
+	ServiceName        string
+	ProxyNodeName      string
+	Consul             *consul.Client
+	Cache              cache.SnapshotCache
+	ProxyListenerPort  int
+	EnvoyAccessLogPath string
+	WithDebugServer    bool
+	DebugServerPort    int
 }
 
 func (x *XDS) Start(ctx context.Context) {
@@ -52,13 +53,14 @@ func (x *XDS) Start(ctx context.Context) {
 		StartDebugServer(x.DebugServerPort, x.ProxyNodeName, x.Cache)
 	}
 
-	go synchronize(ctx, x.Cache, x.ProxyNodeName, x.ProxyListenerPort, clusterChan, tlsChan, cleanupChan)
+	go synchronize(ctx, x.Cache, x.ProxyNodeName, x.ProxyListenerPort, x.EnvoyAccessLogPath, clusterChan, tlsChan, cleanupChan)
 }
 
 func synchronize(ctx context.Context,
 	snc cache.SnapshotCache,
 	node string,
 	proxyPort int,
+	accessLogPath string,
 	clusters <-chan catalog.ClusterInfo,
 	tls <-chan catalog.TLSInfo,
 	cleanup <-chan string) {
@@ -98,7 +100,7 @@ func synchronize(ctx context.Context,
 			metrics.Incr("discovery.cluster.flush", nil)
 			metrics.GaugeI("discovery.cluster.batch_size", len(knownClusters), nil)
 
-			err := putCache(snc, node, proxyPort, clustersList(knownClusters), certs)
+			err := putCache(snc, node, proxyPort, accessLogPath, clustersList(knownClusters), certs)
 			if err != nil {
 				metrics.Incr("discovery.cluster.error.flush", nil)
 				logger.WithError(err).Error("failed to update cluster information")
@@ -115,7 +117,7 @@ func clustersList(cl map[string]catalog.ClusterInfo) []catalog.ClusterInfo {
 	return result
 }
 
-func putCache(snc cache.SnapshotCache, node string, proxyPort int, clusters []catalog.ClusterInfo, tls catalog.TLSInfo) error {
+func putCache(snc cache.SnapshotCache, node string, proxyPort int, accessLogPath string, clusters []catalog.ClusterInfo, tls catalog.TLSInfo) error {
 	var (
 		// NOTE: actual type is []envoyapiv2.Cluster
 		clusterResource []cache.Resource
@@ -133,7 +135,7 @@ func putCache(snc cache.SnapshotCache, node string, proxyPort int, clusters []ca
 		mappings: map[string][]vhostInfo{},
 	}
 
-	envoyListener, err := buildListener("flightpath", proxyPort)
+	envoyListener, err := buildListener("flightpath", proxyPort, accessLogPath)
 	if err != nil {
 		return fmt.Errorf("failed to build cluster definition. %s", err)
 	}
@@ -211,8 +213,8 @@ func buildCluster(serviceName string) *envoyapiv2.Cluster {
 	}
 }
 
-func buildListener(name string, port int) (*envoyapiv2.Listener, error) {
-	filterChain, err := buildFilterChains()
+func buildListener(name string, port int, accessLogPath string) (*envoyapiv2.Listener, error) {
+	filterChain, err := buildFilterChains(accessLogPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build ListenerFilterChain. %s", err)
 	}
@@ -257,7 +259,7 @@ func buildTransportSocket(tls catalog.TLSInfo) (*core.TransportSocket, error) {
 	}, nil
 }
 
-func buildFilterChains() ([]*listener.FilterChain, error) {
+func buildFilterChains(accessLogPath string) ([]*listener.FilterChain, error) {
 	serviceTarget := &core.GrpcService{
 		TargetSpecifier: &core.GrpcService_EnvoyGrpc_{
 			EnvoyGrpc: &core.GrpcService_EnvoyGrpc{
@@ -278,16 +280,7 @@ func buildFilterChains() ([]*listener.FilterChain, error) {
 
 	// See: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log#config-access-log-default-format
 	accessLogger := &accesslogconfig.FileAccessLog{
-		// TODO: make the path configurable.
-		//    systemd messes up with /dev/stdout and /dev/stderr of
-		//    a process and converts them into a socket that streams
-		//    logs to journald. It is not possible to execute `open()`
-		//    on a socket file so the access logger crashes and Envoy
-		//    can't start the listener.
-		//    On a machine without systemd it would be possible to use
-		//    /dev/stdout or /dev/stderr for Access Logging but with
-		//    systemd we have to use a regular file.
-		Path: "/var/log/envoy/access.log",
+		Path: accessLogPath,
 		AccessLogFormat: &accesslogconfig.FileAccessLog_JsonFormat{
 			JsonFormat: &structpb.Struct{
 				Fields: map[string]*structpb.Value{

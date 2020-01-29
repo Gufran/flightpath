@@ -1,0 +1,19 @@
+{
+  "service": {
+    "name": "without-connect",
+    "port": 8181,
+    "tags": ["in-flightpath"],
+    "meta": {
+      "flightpath-route-main": "without-connect.app.local"
+    },
+    "checks": [
+      {
+        "name": "HTTP API check for service without connect",
+        "http": "http://127.0.0.1:8181/health",
+        "method": "GET",
+        "interval": "10s",
+        "timeout": "1s"
+      }
+    ]
+  }
+}

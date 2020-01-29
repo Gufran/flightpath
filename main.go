@@ -37,6 +37,7 @@ func init() {
 	flag.StringVar(&config.ConsulHost, "consul.host", "127.0.0.1", "Network address to a consul agent")
 	flag.StringVar(&config.ConsulToken, "consul.token", "", "Consul token to use")
 	flag.IntVar(&config.EnvoyListenPort, "envoy.listen.port", 9292, "Port used by Envoy Listener")
+	flag.StringVar(&config.EnvoyAccessLogPath, "envoy.access-logs", "/var/log/envoy/access.log", "Path to the file where envoy will write listener access logs")
 	flag.StringVar(&logLevel, "log.level", "INFO", "Set log verbosity. Valid options are trace, debug, error, warn, info, fatal and panic")
 	flag.StringVar(&logFormat, "log.format", "json", "Format of the log message. Valid options are json and plain")
 	flag.BoolVar(&enableStatsd, "dogstatsd", false, "Enable publishing metrics to dogstatsd agent")

@@ -11,16 +11,30 @@ build_time="$(date --utc +'%d-%m-%YT%H:%M:%S+00')"
 ld_vars="-X ${project}/version.Commit=${commit_hash} -X ${project}/version.BuildTime=${build_time}"
 ldflags="-s -w -extldflags \"-static\" ${ld_vars}"
 
-function allarch {
+function allarch { # Build binaries for all supported OS
+  set -x
   for os in darwin linux windows; do
     GOOS="${os}" GOARCH=amd64 go build -a -o "_build/flightpath-${os}-amd64" -ldflags "${ldflags}"
   done
 }
 
-function whatever {
-  go build -a -o /flightpath -ldflags "${ldflags}"
+function whatever { # Build binary for host OS and architecture
+  go build -a -o flightpath -ldflags "${ldflags}"
 }
 
-[ $# -gt 0 ] && { set -x; "${@}"; exit 0; }
+function docs { # Generate documentation or serve local site
+  if [ $# -eq 0 ]; then
+    docker run --rm -it -v "${PWD}":/docs squidfunk/mkdocs-material build --clean --site-dir _site
+  else
+    docker run --rm -it -p 8000:8000 -v "${PWD}":/docs squidfunk/mkdocs-material
+  fi
+}
+
+function help { # Print help text
+  echo "Available commands:"
+  grep '^function' "${BASH_SOURCE[0]}" | sed -e 's/function /  /' -e 's/{ //' | column -t -s\#
+}
+
+[ $# -gt 0 ] && { "${@}"; exit 0; }
 
 whatever

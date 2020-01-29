@@ -1,0 +1,22 @@
+{
+  "service": {
+    "name": "with-connect",
+    "port": 8182,
+    "tags": ["in-flightpath"],
+    "meta": {
+      "flightpath-route-main": "with-connect.app.local"
+    },
+    "connect": {
+      "sidecar_service": {}
+    },
+    "checks": [
+      {
+        "name": "HTTP API check for service with connect sidecar",
+        "http": "http://127.0.0.1:8182/health",
+        "method": "GET",
+        "interval": "10s",
+        "timeout": "1s"
+      }
+    ]
+  }
+}

@@ -18,16 +18,17 @@ import (
 var logger = log.New("discovery")
 
 type Config struct {
-	ListenPort       int
-	ConsulProto      string
-	ConsulHost       string
-	ConsulPort       int
-	ConsulToken      string
-	SelfName         string
-	NodeName         string
-	EnvoyListenPort  int
-	StartDebugServer bool
-	DebugServerPort  int
+	ListenPort         int
+	ConsulProto        string
+	ConsulHost         string
+	ConsulPort         int
+	ConsulToken        string
+	SelfName           string
+	NodeName           string
+	EnvoyListenPort    int
+	EnvoyAccessLogPath string
+	StartDebugServer   bool
+	DebugServerPort    int
 }
 
 func (c *Config) getConsulClient() (*consul.Client, error) {
@@ -54,11 +55,12 @@ func Start(ctx context.Context, config *Config) (func(), error) {
 	}
 
 	x := &XDS{
-		Consul:            cc,
-		Cache:             apicache,
-		ServiceName:       config.SelfName,
-		ProxyNodeName:     config.NodeName,
-		ProxyListenerPort: config.EnvoyListenPort,
+		Consul:             cc,
+		Cache:              apicache,
+		ServiceName:        config.SelfName,
+		ProxyNodeName:      config.NodeName,
+		ProxyListenerPort:  config.EnvoyListenPort,
+		EnvoyAccessLogPath: config.EnvoyAccessLogPath,
 
 		WithDebugServer: config.StartDebugServer,
 		DebugServerPort: config.DebugServerPort,

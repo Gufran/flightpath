@@ -1,0 +1,43 @@
+site_name: Flightpath
+
+repo_name: Gufran/flightpath
+repo_url: https://github.com/Gufran/flightpath
+
+site_url: https://docs.shuttl.xyz/sre
+site_description: Flightpath Edge Proxy Documentation
+site_author: Mohammad Gufran
+
+theme:
+  name: 'material'
+  palette:
+    primary: 'White'
+    accent: 'Indigo'
+
+extra:
+  social:
+    - type: github-alt
+      link: https://github.com/Gufran
+    - type: twitter
+      link: https://twitter.com/freatbeater
+
+markdown_extensions:
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - markdown.extensions.def_list
+  - admonition
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: true
