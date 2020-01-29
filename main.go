@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"github.com/Gufran/flightpath/log"
 	"github.com/Gufran/flightpath/metrics"
+	"github.com/Gufran/flightpath/version"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
@@ -15,13 +17,15 @@ import (
 var config = &discovery.Config{}
 
 var (
-	logLevel   string
-	logFormat  string
+	logLevel  string
+	logFormat string
 
 	enableStatsd bool
-	statsdAddr string
-	statsdPort int
-	statsdNS string
+	statsdAddr   string
+	statsdPort   int
+	statsdNS     string
+
+	showVersion bool
 )
 
 func init() {
@@ -41,10 +45,16 @@ func init() {
 	flag.StringVar(&statsdNS, "dogstatsd.namespace", "flightpath", "Metrics namespace for dogstatsd")
 	flag.BoolVar(&config.StartDebugServer, "debug", true, "Start debug HTTP server on loopback interface")
 	flag.IntVar(&config.DebugServerPort, "debug.port", 7180, "Network port to use for debug HTTP server")
+	flag.BoolVar(&showVersion, "version", false, "Show version information")
 	flag.Parse()
 }
 
 func main() {
+	if showVersion {
+		fmt.Println(version.FullString())
+		return
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	log.Init(logLevel, logFormat)
