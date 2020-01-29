@@ -173,7 +173,13 @@ func TestGetRoutingInfo(t *testing.T) {
 
 	for idx, test := range tests {
 		result := getRoutingInfo(&test.service)
-		assert.Equal(t, result, test.expect, "Case %d", idx)
+		for k, v := range test.expect {
+			if slice, ok := result[k]; !ok {
+				t.Errorf("Case %d: Key %s is not present in map", idx, k)
+			} else {
+				assert.ElementsMatch(t, v, slice, "Case %d", idx)
+			}
+		}
 	}
 }
 
@@ -280,6 +286,6 @@ func TestCluster_Endpoints(t *testing.T) {
 
 	for idx, test := range tests {
 		result := test.cluster.Endpoints()
-		assert.Equal(t, result, test.expect, "Case %d", idx )
+		assert.ElementsMatch(t, result, test.expect, "Case %d", idx)
 	}
 }
