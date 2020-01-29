@@ -18,5 +18,11 @@ jobs:
       - name: Test Components
         run: go test -v -timeout 3m ./...
 
-      - name: Build
-        run: go build -v .
+      - name: Build Binaries
+        run: bash build.sh allarch
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v1
+        with:
+          name: binaries
+          path: _build/

@@ -1,5 +1,7 @@
 # Flightpath
 
+![Test](https://github.com/Gufran/flightpath/workflows/Test/badge.svg?branch=master)
+
 Flightpath is an Envoy Control Plane that integrates with Consul Connect and provides L7 routing
 at edge.
 
