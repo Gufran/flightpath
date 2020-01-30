@@ -22,9 +22,13 @@ function whatever { # Build binary for host OS and architecture
   go build -a -o flightpath -ldflags "${ldflags}"
 }
 
+function optsmd { # Generate a markdown table of available options
+  go run -tags docs doc.go flags.go
+}
+
 function docs { # Generate documentation or serve local site
   if [ $# -eq 0 ]; then
-    docker run --rm -it -v "${PWD}":/docs squidfunk/mkdocs-material build --clean --site-dir _site
+    docker run --rm -it -v "${PWD}":/docs squidfunk/mkdocs-material build --clean --site-dir docs
   else
     docker run --rm -it -p 8000:8000 -v "${PWD}":/docs squidfunk/mkdocs-material
   fi
