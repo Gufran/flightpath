@@ -10,13 +10,6 @@ Flightpath can be compared with [Fabio][] or [Traefik][] but it is not a proxy i
 cluster discovery and traffic routing themselves, Flightpath is only responsible for discovering the routing information
 from consul catalog and configuring Envoy to route the traffic.
 
-  Configuration
-  Observability
-    Logs
-    Metrics
-      Datadog
-      Statsd
-
 
 [xDS server]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol 
 [Consul Connect]: https://www.consul.io/docs/connect/index.html

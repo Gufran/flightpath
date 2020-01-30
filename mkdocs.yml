@@ -3,15 +3,19 @@ site_name: Flightpath
 repo_name: Gufran/flightpath
 repo_url: https://github.com/Gufran/flightpath
 
-site_url: https://docs.shuttl.xyz/sre
+site_url: https://docs.flightpath.xyz/
 site_description: Flightpath Edge Proxy Documentation
 site_author: Mohammad Gufran
+docs_dir: site
 
 theme:
   name: 'material'
   palette:
     primary: 'White'
     accent: 'Indigo'
+  font:
+    text: Roboto
+    code: Roboto Mono
 
 extra:
   social:
@@ -21,6 +25,7 @@ extra:
       link: https://twitter.com/freatbeater
 
 markdown_extensions:
+  - footnotes
   - pymdownx.betterem:
       smart_enable: all
   - pymdownx.caret
@@ -39,5 +44,14 @@ markdown_extensions:
   - admonition
   - codehilite:
       guess_lang: false
+      linenums: true
   - toc:
       permalink: true
+
+nav:
+  - Introduction: index.md
+  - Getting Started: getting-started.md
+  - Route Discovery: route-discovery.md
+  - Configuration: configuration.md
+  - Observability: observability.md
+  - Error Messages: error-messages.md

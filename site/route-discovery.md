@@ -3,6 +3,11 @@
 In order to route the traffic to internal services you need to add a tag and some metadata to the service definition before
 Flightpath can identify it as a valid target.
 
+ 1. Tag the service with `in-flightpath`
+ 1. Add metadata `flightpath-route-main = the-domain.tld/path`
+ 
+and you should be able to access the service on `http://thedomain.tld/path`
+ 
 !!! info
     Flightpath can route traffic to any service. It does not matter if the service has connect sidecar or not, if a service
     is registered in consul catalog with proper tag and metadata Flightpath can route traffic to it.
@@ -11,7 +16,16 @@ Flightpath watches consul catalog for services tagged with `in-flightpath` tag. 
 to receive traffic from edge.  
 
 After discovering the services Flightpath looks for service metadata. Any metadata attribute that starts with `flightpath-route-`
-is used for routing configuration. The value of such an attribute must adhere to one of the following forms:
+is used for routing configuration.
+
+!!! tip
+    Flightpath only cares about the `flightpath-route` prefix on metadata key. You can configure as many routes as you want
+    simply by adding more meta attributes with this prefix.
+    
+    For example one service can have `flightpath-route-main`, `flightpath-route-path-prefix`, `flightpath-route-only-auth`
+    to configure three different routes with different domains and paths.
+
+The value of a matching attribute must adhere to one of the following forms:
 
 `domain.tld`
 
