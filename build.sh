@@ -29,6 +29,7 @@ function optsmd { # Generate a markdown table of available options
 function docs { # Generate documentation or serve local site
   if [ $# -eq 0 ]; then
     docker run --rm -it -v "${PWD}":/docs squidfunk/mkdocs-material build --clean --site-dir docs
+    echo "docs.flightpath.xyz" > docs/CNAME
   else
     docker run --rm -it -p 8000:8000 -v "${PWD}":/docs squidfunk/mkdocs-material
   fi
