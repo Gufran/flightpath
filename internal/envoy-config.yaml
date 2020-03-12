@@ -39,3 +39,51 @@ static_resources:
                     socket_address:
                       address: 127.0.0.1
                       port_value: 7171
+    - name: datadog_trace_collector
+      connect_timeout: 0.25s
+      type: STATIC
+      lb_policy: ROUND_ROBIN
+      http2_protocol_options: {}
+      upstream_connection_options:
+        tcp_keepalive: {}
+      load_assignment:
+        cluster_name: datadog_trace_collector
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 8126
+
+stats_config:
+  use_all_default_tags: true
+  stats_tags:
+    - regex: "^cluster\\.((?:[^.]+~)?(?:[^.]+\\.)?([^.]+)\\.[^.]+\\.[^.]+\\.[^.]+\\.[^.]+\\.consul\\.)"
+      tag_name: "flightpath.service"
+    - regex: "^cluster\\.((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.([^.]+)\\.[^.]+\\.[^.]+\\.consul\\.)"
+      tag_name: "flightpath.datacenter"
+    - regex: "^cluster\\.((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.[^.]+\\.([^.]+)\\.[^.]+\\.consul\\.)"
+      tag_name: "flightpath.routing_type"
+    - regex: "^cluster\\.((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.[^.]+\\.[^.]+\\.([^.]+)\\.consul\\.)"
+      tag_name: "flightpath.trust_domain"
+    - regex: "^cluster\\.(((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.[^.]+)\\.[^.]+\\.[^.]+\\.consul\\.)"
+      tag_name: "flightpath.target"
+    - regex: "^cluster\\.(((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.[^.]+\\.[^.]+\\.[^.]+)\\.consul\\.)"
+      tag_name: "flightpath.full_target"
+
+stats_sinks:
+  - name: envoy.dog_statsd
+    config:
+      address:
+        socket_address:
+          protocol: UDP
+          address: 127.0.0.1
+          port_value: 8125
+
+tracing:
+  http:
+    name: envoy.tracers.datadog
+    config:
+      collector_cluster: datadog_trace_collector
+      service_name: flightpath
