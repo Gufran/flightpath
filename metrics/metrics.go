@@ -1,31 +1,18 @@
 package metrics
 
 import (
-	"fmt"
-	"github.com/DataDog/datadog-go/statsd"
 	"github.com/Gufran/flightpath/log"
-	"strings"
 	"time"
 )
 
 var (
-	client Sink = NewNoOpSink()
-    logger = log.New("metrics")
+	client = NewNoOpSink()
+	logger = log.New("metrics")
 )
 
-// Init initializes the metrics subsystem.
-// addr is the host address where the statsd agent can be
-// reached. port defines the network port to use for
-// communication.
-// ns is used as a prefix for all metrics that are published
-// by flightpath.
-func Init(addr string, port int, ns string) (err error) {
-	if ns != "" {
-		ns = strings.TrimRight(ns, ".") + "."
-	}
-
-	client, err = statsd.New(fmt.Sprintf("%s:%d", addr, port), statsd.WithNamespace(ns))
-	return err
+// SetupSink initializes the metrics subsystem.
+func SetSink(sink Sink) {
+	client = sink
 }
 
 // Gauge publishes the gauge type metrics
@@ -35,6 +22,7 @@ func Gauge(name string, value float64, tags []string) {
 		logger.WithError(err).Error("failed to report Gauge metrics")
 	}
 }
+
 // GaugeI is same as Gauge but it accepts the
 // metric value as an integer
 func GaugeI(name string, value int, tags []string) {

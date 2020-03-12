@@ -14,10 +14,11 @@ var (
 	logLevel  string
 	logFormat string
 
-	enableStatsd bool
-	statsdAddr   string
-	statsdPort   int
-	statsdNS     string
+	metricsSink string
+
+	statsdAddr string
+	statsdPort int
+	statsdNS   string
 
 	showVersion bool
 )
@@ -34,7 +35,7 @@ func init() {
 	flag.StringVar(&config.EnvoyAccessLogPath, "envoy.access-logs", "/var/log/envoy/access.log", "Path to the file where envoy will write listener access logs")
 	flag.StringVar(&logLevel, "log.level", "INFO", "Set log verbosity. Valid options are trace, debug, error, warn, info, fatal and panic")
 	flag.StringVar(&logFormat, "log.format", "json", "Format of the log message. Valid options are json and plain")
-	flag.BoolVar(&enableStatsd, "dogstatsd", false, "Enable publishing metrics to dogstatsd agent")
+	flag.StringVar(&metricsSink, "metrics.sink", "", "Set the metrics sink. Valid options are 'dogstatsd' and 'stderr'")
 	flag.StringVar(&statsdAddr, "dogstatsd.addr", "127.0.0.1", "Address of the dogstatsd agent")
 	flag.IntVar(&statsdPort, "dogstatsd.port", 8125, "Port of the dogstatsd agent")
 	flag.StringVar(&statsdNS, "dogstatsd.namespace", "flightpath", "Metrics namespace for dogstatsd")
