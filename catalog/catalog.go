@@ -110,7 +110,7 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 			// and start a watcher for them.
 			for name, isSidecar := range candidates {
 				if _, ok := activeWatchers[name]; !ok {
-					metrics.Incr("catalog.discovery.clusters.watcher.new", []string{"service:"+name})
+					metrics.Incr("catalog.discovery.clusters.watcher.new", []string{"service:" + name})
 					logger.WithField("service", name).Info("starting watcher for service")
 
 					ctx, cancel := context.WithCancel(c.ctx)
@@ -124,7 +124,7 @@ func (c *Catalog) DiscoverClusters(clusters chan<- ClusterInfo, cleanup chan<- s
 			// their watcher
 			for name, stop := range activeWatchers {
 				if _, ok := candidates[name]; !ok {
-					metrics.Incr("catalog.discovery.clusters.watcher.closing", []string{"service:"+name})
+					metrics.Incr("catalog.discovery.clusters.watcher.closing", []string{"service:" + name})
 					logger.WithField("service", name).Info("stopping watcher for service")
 
 					// Notify the cleanup channel asynchronously so that we
@@ -157,7 +157,7 @@ func (c *Catalog) watchService(ctx context.Context, name string, isSidecar bool,
 	}
 
 	tags := []string{
-		"service:"+name,
+		"service:" + name,
 		fmt.Sprintf("is_sidecar:%v", isSidecar),
 	}
 
@@ -188,10 +188,29 @@ func (c *Catalog) watchService(ctx context.Context, name string, isSidecar bool,
 			clusters <- &Cluster{
 				name:      name,
 				isConnect: isSidecar,
-				services:  nodes,
+				services:  filterUnhealthyNodes(nodes),
 			}
 		}
 	}
+}
+
+func allChecksPassing(checks api.HealthChecks) bool {
+	for _, check := range checks {
+		if check.Status != api.HealthPassing {
+			return false
+		}
+	}
+	return true
+}
+
+func filterUnhealthyNodes(services []*api.CatalogService) []*api.CatalogService {
+	var result []*api.CatalogService
+	for _, service := range services {
+		if allChecksPassing(service.Checks) {
+			result = append(result, service)
+		}
+	}
+	return result
 }
 
 func isSidecarProxy(srvc *api.CatalogService) bool {

@@ -71,7 +71,12 @@ func synchronize(ctx context.Context,
 	// arrive before setting up the shop.
 	certs := <-tls
 
-	tick := time.Tick(5 * time.Second)
+	tick := 1 * time.Second
+	timer := time.NewTimer(tick)
+	resetTimer := func() {
+		timer.Reset(tick)
+	}
+
 	knownClusters := map[string]catalog.ClusterInfo{}
 
 	for {
@@ -81,25 +86,29 @@ func synchronize(ctx context.Context,
 			return
 
 		case cluster := <-clusters:
+			resetTimer()
 			logger.WithField("cluster", cluster.Name()).Info("updating cluster entry")
 			metrics.Incr("discovery.cluster.update", []string{"cluster:" + cluster.Name()})
+			metrics.GaugeI("discovery.cluster.endpoints.count", len(cluster.Endpoints()), []string{"cluster:" + cluster.Name()})
 			knownClusters[cluster.Name()] = cluster
 
 		case certs = <-tls:
+			resetTimer()
 			metrics.Incr("discovery.tls.update", nil)
-		// keep'em up to date
 
 		case name := <-cleanup:
+			resetTimer()
 			metrics.Incr("discovery.cluster.cleanup", []string{"cluster:" + name})
 			logger.WithField("cluster", name).Info("removing cluster from tracked list")
 			if _, ok := knownClusters[name]; ok {
 				delete(knownClusters, name)
 			}
 
-		case <-tick:
+		case <-timer.C:
 			metrics.Incr("discovery.cluster.flush", nil)
 			metrics.GaugeI("discovery.cluster.batch_size", len(knownClusters), nil)
 
+			logger.Info("flushing cluster configuration to xDS server")
 			err := putCache(snc, node, proxyPort, accessLogPath, clustersList(knownClusters), certs)
 			if err != nil {
 				metrics.Incr("discovery.cluster.error.flush", nil)
