@@ -27,6 +27,7 @@ func printUsage(f *flag.Flag) {
 	fmt.Printf(tplFlagName, f.Name)
 	fmt.Println()
 	fmt.Printf(tplFlagDefault, f.DefValue)
+	fmt.Println()
 	fmt.Printf(tplFlagUsage, f.Usage)
 	fmt.Println()
 }

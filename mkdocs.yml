@@ -52,6 +52,7 @@ nav:
   - Introduction: index.md
   - Getting Started: getting-started.md
   - Route Discovery: route-discovery.md
+  - Usage: usage.md
   - Configuration: configuration.md
   - Observability: observability.md
   - Error Messages: error-messages.md
