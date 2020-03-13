@@ -8,17 +8,25 @@ import (
 )
 
 const (
-	tableHeader = "| Option |  Description |"
-	tableSep    = "|:--------|:------------|"
-	tableRow    = "| `-%s` |  %s |\n"
+	tplFlagName    = "==`-%s`==\n"
+	tplFlagDefault = ":    Default `%q`\n"
+	tplFlagUsage   = "     %s\n"
+	header         = `# Usage
+
+Following command line flags can be used to configure flightpath
+
+`
 )
 
 func main() {
-	fmt.Println(tableHeader)
-	fmt.Println(tableSep)
-	flag.CommandLine.VisitAll(printFlagTable)
+	fmt.Print(header)
+	flag.CommandLine.VisitAll(printUsage)
 }
 
-func printFlagTable(f *flag.Flag) {
-	fmt.Printf(tableRow, f.Name, f.Usage)
+func printUsage(f *flag.Flag) {
+	fmt.Printf(tplFlagName, f.Name)
+	fmt.Println()
+	fmt.Printf(tplFlagDefault, f.DefValue)
+	fmt.Printf(tplFlagUsage, f.Usage)
+	fmt.Println()
 }
