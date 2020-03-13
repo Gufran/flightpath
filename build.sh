@@ -60,7 +60,7 @@ function release() { # Build binaries and sign off for release
   shasum_file="flightpath_${version}_SHA256SUMS"
   shasum --algorithm 256 _build/flightpath-*-amd64 >"_build/${shasum_file}"
   gpg --default-key "${GPG_KEY}" --detach-sig "_build/${shasum_file}"
-  git commit --allow-empty -gpg-sign="${GPG_KEY}" --message "Release ${version}" --quiet --signoff
+  git commit --allow-empty --gpg-sign="${GPG_KEY}" --message "Release ${version}" --quiet --signoff
   git tag --annotate --create-reflog --local-user "${GPG_KEY}" --message "Version ${version}" --sign "v${version}"
 
   echo ""
