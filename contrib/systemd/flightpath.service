@@ -1,0 +1,22 @@
+# Adopt this unit file into your configuration and workflow.
+# It is likely that directly using this file as it is
+# might not work for everyone.
+
+[Unit]
+Description = Flightpath
+Documentation = https://docs.flightpath.xyz/
+Requires = network-online.target
+After = consul.service
+
+[Service]
+User = flightpath
+Group = flightpath
+
+WatchdogSec = 1s
+KillMode = process
+Restart = on-failure
+
+ExecStart = /usr/bin/flightpath -metrics.sink dogstatsd
+
+[Install]
+WantedBy = multi-user.target
