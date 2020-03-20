@@ -74,11 +74,15 @@ function release() { # Build binaries and sign off for release
 function help() { # Print help text
   echo "Available commands:"
   grep '^function' "${BASH_SOURCE[0]}" | sed -e 's/function /  /' -e 's/()//' -e 's/{ //' | column -t -s\#
+  exit 1
+}
+
+ function _has_subcommand() {
+  grep '^function' "${BASH_SOURCE[0]}" | sed -e 's/function //' -e 's/().*//' | grep -w "${1}" >/dev/null 2>&1
 }
 
 [ $# -gt 0 ] && {
-  "${@}"
-  exit 0
+  _has_subcommand "${1}" && "${@}" && exit 0
 }
 
 help
