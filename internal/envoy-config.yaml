@@ -3,9 +3,11 @@ node:
   cluster: flightpath
 
 admin:
-  access_log_path: /tmp/admin_access.log
+  access_log_path: /dev/null
   address:
-    socket_address: { address: 127.0.0.1, port_value: 9901 }
+    socket_address:
+      address: 127.0.0.1
+      port_value: 9901
 
 dynamic_resources:
   lds_config:
@@ -22,6 +24,34 @@ dynamic_resources:
           cluster_name: xds_cluster
 
 static_resources:
+  listeners:
+    - name: health_check_listener
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 9998
+      filter_chains:
+        - filters:
+            - name: envoy.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                stat_prefix: healthcheck_edge
+                codec_type: AUTO
+                route_config:
+                  name: health_check_route
+                  virtual_hosts:
+                    - name: vhs_healthcheck
+                      domains:
+                        - "*"
+                      routes:
+                        - name: healthcheck_route
+                          match:
+                            path: /health
+                          direct_response:
+                            status: 200
+                http_filters:
+                  - name: envoy.router
+
   clusters:
     - name: xds_cluster
       connect_timeout: 0.25s
@@ -58,19 +88,24 @@ static_resources:
 
 stats_config:
   use_all_default_tags: true
+  stats_matcher:
+    exclusion_list:
+      patterns:
+        - prefix: "cluster.datadog_trace_collector."
   stats_tags:
-    - regex: "^cluster\\.((?:[^.]+~)?(?:[^.]+\\.)?([^.]+)\\.[^.]+\\.[^.]+\\.[^.]+\\.[^.]+\\.consul\\.)"
-      tag_name: "flightpath.service"
-    - regex: "^cluster\\.((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.([^.]+)\\.[^.]+\\.[^.]+\\.consul\\.)"
-      tag_name: "flightpath.datacenter"
-    - regex: "^cluster\\.((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.[^.]+\\.([^.]+)\\.[^.]+\\.consul\\.)"
-      tag_name: "flightpath.routing_type"
-    - regex: "^cluster\\.((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.[^.]+\\.[^.]+\\.([^.]+)\\.consul\\.)"
-      tag_name: "flightpath.trust_domain"
-    - regex: "^cluster\\.(((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.[^.]+)\\.[^.]+\\.[^.]+\\.consul\\.)"
-      tag_name: "flightpath.target"
-    - regex: "^cluster\\.(((?:[^.]+~)?(?:[^.]+\\.)?[^.]+\\.[^.]+\\.[^.]+\\.[^.]+\\.[^.]+)\\.consul\\.)"
-      tag_name: "flightpath.full_target"
+    - regex: "^cluster\\.((.+?)\\.)"
+      tag_name: "cluster_name"
+    - regex: "^listener\\.((\\d+\\.\\d+\\.\\d+\\.\\d+_\\d+)\\.)"
+      tag_name: "listener_addr"
+    - regex: "^listener\\.((admin)\\.)"
+      tag_name: "listener_name"
+    - regex: "^listener\\.(worker_(\\d+)\\.)"
+      tag_name: "listener_worker_id"
+    - regex: "^http\\.((.+?)\\.)"
+      tag_name: "http_cluster_name"
+    - regex: "^server\\.(worker_(\\d+)\\.)"
+      tag_name: "server_worker_id"
+
 
 stats_sinks:
   - name: envoy.dog_statsd
