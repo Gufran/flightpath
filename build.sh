@@ -47,6 +47,17 @@ function allarch() { # Build binaries for all supported OS
   done
 }
 
+function test() { # Run tests
+    docker run \
+      --interactive \
+      --rm \
+      --dns="1.1.1.1" \
+      --volume="${PWD}:/go/src/flightpath" \
+      --workdir="/go/src/flightpath" \
+      "golang:${go_version}" \
+      go test -v -race -mod vendor ./...
+}
+
 function release() { # Build binaries and sign off for release
   if [ -z "${GPG_KEY}" ]; then
     echo "GPG_KEY environment variable is not set"
