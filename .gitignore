@@ -14,3 +14,5 @@
 flightpath
 _build
 pkg
+tmp.*
+.DS_Store

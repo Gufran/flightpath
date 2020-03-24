@@ -17,30 +17,16 @@ import (
 
 var logger = log.New("discovery")
 
-type Config struct {
-	ListenPort         int
-	ConsulProto        string
-	ConsulHost         string
-	ConsulPort         int
-	ConsulToken        string
-	SelfName           string
-	NodeName           string
-	EnvoyListenPort    int
-	EnvoyAccessLogPath string
-	StartDebugServer   bool
-	DebugServerPort    int
-}
-
-func (c *Config) getConsulClient() (*consul.Client, error) {
+func getConsulClient(c *ConsulConfig) (*consul.Client, error) {
 	cfg := consul.DefaultConfig()
-	cfg.Address = fmt.Sprintf("%s://%s:%d", c.ConsulProto, c.ConsulHost, c.ConsulPort)
-	cfg.Token = c.ConsulToken
+	cfg.Address = fmt.Sprintf("%s://%s:%d", c.Proto, c.Host, c.Port)
+	cfg.Token = c.Token
 
 	return consul.NewClient(cfg)
 }
 
 func Start(ctx context.Context, config *Config) (func(), error) {
-	cc, err := config.getConsulClient()
+	cc, err := getConsulClient(config.Consul)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consul client. %s", err)
 	}
@@ -49,24 +35,13 @@ func Start(ctx context.Context, config *Config) (func(), error) {
 	xds := dss.NewServer(apicache, nil)
 	server := grpc.NewServer()
 
-	sid, err := registerSelf(cc, config.SelfName, config.ListenPort)
+	sid, err := registerSelf(cc, config.XDS.ServiceName, config.XDS.ListenPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register the service in consul catalog. %s", err)
 	}
 
-	x := &XDS{
-		Consul:             cc,
-		Cache:              apicache,
-		ServiceName:        config.SelfName,
-		ProxyNodeName:      config.NodeName,
-		ProxyListenerPort:  config.EnvoyListenPort,
-		EnvoyAccessLogPath: config.EnvoyAccessLogPath,
-
-		WithDebugServer: config.StartDebugServer,
-		DebugServerPort: config.DebugServerPort,
-	}
-
-	x.Start(ctx)
+	config.XDS.Init(cc, apicache)
+	config.XDS.Start(ctx)
 
 	sd.RegisterAggregatedDiscoveryServiceServer(server, xds)
 	api.RegisterEndpointDiscoveryServiceServer(server, xds)
@@ -74,9 +49,9 @@ func Start(ctx context.Context, config *Config) (func(), error) {
 	api.RegisterRouteDiscoveryServiceServer(server, xds)
 	api.RegisterListenerDiscoveryServiceServer(server, xds)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.ListenPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.XDS.ListenPort))
 	if err != nil {
-		return nil, fmt.Errorf("failed to start network listener on port %d. %s", config.ListenPort, err)
+		return nil, fmt.Errorf("failed to start network listener on port %d. %s", config.XDS.ListenPort, err)
 	}
 
 	go func() {

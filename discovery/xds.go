@@ -21,55 +21,47 @@ import (
 	duration "github.com/golang/protobuf/ptypes/duration"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"github.com/golang/protobuf/ptypes/wrappers"
-	consul "github.com/hashicorp/consul/api"
 	"strings"
 	"time"
 )
 
 const XdsClusterName = "xds_cluster"
 
-type XDS struct {
-	ServiceName        string
-	ProxyNodeName      string
-	Consul             *consul.Client
-	Cache              cache.SnapshotCache
-	ProxyListenerPort  int
-	EnvoyAccessLogPath string
-	WithDebugServer    bool
-	DebugServerPort    int
+type SyncChans struct {
+	cluster chan catalog.ClusterInfo
+	tls     chan catalog.TLSInfo
+	cleanup chan string
+}
+
+func NewSyncChans() *SyncChans {
+	return &SyncChans{
+		cluster: make(chan catalog.ClusterInfo),
+		tls:     make(chan catalog.TLSInfo),
+		cleanup: make(chan string),
+	}
 }
 
 func (x *XDS) Start(ctx context.Context) {
 	source := catalog.NewCatalog(ctx, x.Consul)
 
-	clusterChan := make(chan catalog.ClusterInfo)
-	tlsChan := make(chan catalog.TLSInfo)
-	cleanupChan := make(chan string)
+	ch := NewSyncChans()
 
-	go source.DiscoverClusters(clusterChan, cleanupChan)
-	go source.WatchTLS(x.ServiceName, tlsChan)
+	go source.DiscoverClusters(ch.cluster, ch.cleanup)
+	go source.WatchTLS(x.ServiceName, ch.tls)
 
-	if x.WithDebugServer {
-		StartDebugServer(x.DebugServerPort, x.ProxyNodeName, x.Cache)
+	if x.Debug.Enable {
+		StartDebugServer(x.Debug.Port, x.Envoy.NodeName, x.Cache)
 	}
 
-	go synchronize(ctx, x.Cache, x.ProxyNodeName, x.ProxyListenerPort, x.EnvoyAccessLogPath, clusterChan, tlsChan, cleanupChan)
+	go synchronize(ctx, x.Cache, ch, x.Envoy)
 }
 
-func synchronize(ctx context.Context,
-	snc cache.SnapshotCache,
-	node string,
-	proxyPort int,
-	accessLogPath string,
-	clusters <-chan catalog.ClusterInfo,
-	tls <-chan catalog.TLSInfo,
-	cleanup <-chan string) {
-
+func synchronize(ctx context.Context, snc cache.SnapshotCache, ch *SyncChans, envoyConfig *EnvoyConfig) {
 	// TLS info is absolutely necessary and since we know that we
 	// are registered as a connect enabled service and guaranteed
 	// to receive a certificate pair, we'll just wait for it to
 	// arrive before setting up the shop.
-	certs := <-tls
+	certs := <-ch.tls
 
 	tick := 1 * time.Second
 	timer := time.NewTimer(tick)
@@ -85,18 +77,18 @@ func synchronize(ctx context.Context,
 		case <-ctx.Done():
 			return
 
-		case cluster := <-clusters:
+		case cluster := <-ch.cluster:
 			resetTimer()
 			logger.WithField("cluster", cluster.Name()).Info("updating cluster entry")
 			metrics.Incr("discovery.cluster.update", []string{"cluster:" + cluster.Name()})
 			metrics.GaugeI("discovery.cluster.endpoints.count", len(cluster.Endpoints()), []string{"cluster:" + cluster.Name()})
 			knownClusters[cluster.Name()] = cluster
 
-		case certs = <-tls:
+		case certs = <-ch.tls:
 			resetTimer()
 			metrics.Incr("discovery.tls.update", nil)
 
-		case name := <-cleanup:
+		case name := <-ch.cleanup:
 			resetTimer()
 			metrics.Incr("discovery.cluster.cleanup", []string{"cluster:" + name})
 			logger.WithField("cluster", name).Info("removing cluster from tracked list")
@@ -109,7 +101,7 @@ func synchronize(ctx context.Context,
 			metrics.GaugeI("discovery.cluster.batch_size", len(knownClusters), nil)
 
 			logger.Info("flushing cluster configuration to xDS server")
-			err := putCache(snc, node, proxyPort, accessLogPath, clustersList(knownClusters), certs)
+			err := putCache(snc, envoyConfig, clustersList(knownClusters), certs)
 			if err != nil {
 				metrics.Incr("discovery.cluster.error.flush", nil)
 				logger.WithError(err).Error("failed to update cluster information")
@@ -126,7 +118,7 @@ func clustersList(cl map[string]catalog.ClusterInfo) []catalog.ClusterInfo {
 	return result
 }
 
-func putCache(snc cache.SnapshotCache, node string, proxyPort int, accessLogPath string, clusters []catalog.ClusterInfo, tls catalog.TLSInfo) error {
+func putCache(snc cache.SnapshotCache, envoyConfig *EnvoyConfig, clusters []catalog.ClusterInfo, tls catalog.TLSInfo) error {
 	var (
 		// NOTE: actual type is []envoyapiv2.Cluster
 		clusterResource []cache.Resource
@@ -144,7 +136,7 @@ func putCache(snc cache.SnapshotCache, node string, proxyPort int, accessLogPath
 		mappings: map[string][]vhostInfo{},
 	}
 
-	envoyListener, err := buildListener("flightpath", proxyPort, accessLogPath)
+	envoyListener, err := buildListener("flightpath", envoyConfig)
 	if err != nil {
 		return fmt.Errorf("failed to build cluster definition. %s", err)
 	}
@@ -175,7 +167,7 @@ func putCache(snc cache.SnapshotCache, node string, proxyPort int, accessLogPath
 	routeResource = []cache.Resource{
 		&envoyapiv2.RouteConfiguration{
 			Name:         "upstream",
-			VirtualHosts: vhosts.collect(proxyPort),
+			VirtualHosts: vhosts.collect(envoyConfig.ListenerPort),
 		},
 	}
 
@@ -185,7 +177,7 @@ func putCache(snc cache.SnapshotCache, node string, proxyPort int, accessLogPath
 	metrics.GaugeI("discovery.cache.put.listener", len(listenerResource), nil)
 
 	snap := cache.NewSnapshot(catalog.Hash(clusters), endpointResource, clusterResource, routeResource, listenerResource)
-	return snc.SetSnapshot(node, snap)
+	return snc.SetSnapshot(envoyConfig.NodeName, snap)
 }
 
 func buildCluster(serviceName string) *envoyapiv2.Cluster {
@@ -222,8 +214,8 @@ func buildCluster(serviceName string) *envoyapiv2.Cluster {
 	}
 }
 
-func buildListener(name string, port int, accessLogPath string) (*envoyapiv2.Listener, error) {
-	filterChain, err := buildFilterChains(accessLogPath)
+func buildListener(name string, envoyConfig *EnvoyConfig) (*envoyapiv2.Listener, error) {
+	filterChain, err := buildFilterChains(envoyConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build ListenerFilterChain. %s", err)
 	}
@@ -236,7 +228,7 @@ func buildListener(name string, port int, accessLogPath string) (*envoyapiv2.Lis
 					Protocol: core.SocketAddress_TCP,
 					Address:  "0.0.0.0",
 					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: uint32(port),
+						PortValue: uint32(envoyConfig.ListenerPort),
 					},
 				},
 			},
@@ -268,7 +260,7 @@ func buildTransportSocket(tls catalog.TLSInfo) (*core.TransportSocket, error) {
 	}, nil
 }
 
-func buildFilterChains(accessLogPath string) ([]*listener.FilterChain, error) {
+func buildFilterChains(envoyConfig *EnvoyConfig) ([]*listener.FilterChain, error) {
 	serviceTarget := &core.GrpcService{
 		TargetSpecifier: &core.GrpcService_EnvoyGrpc_{
 			EnvoyGrpc: &core.GrpcService_EnvoyGrpc{
@@ -289,7 +281,7 @@ func buildFilterChains(accessLogPath string) ([]*listener.FilterChain, error) {
 
 	// See: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log#config-access-log-default-format
 	accessLogger := &accesslogconfig.FileAccessLog{
-		Path: accessLogPath,
+		Path: envoyConfig.AccessLogPath,
 		AccessLogFormat: &accesslogconfig.FileAccessLog_JsonFormat{
 			JsonFormat: &structpb.Struct{
 				Fields: map[string]*structpb.Value{
@@ -344,6 +336,20 @@ func buildFilterChains(accessLogPath string) ([]*listener.FilterChain, error) {
 				},
 			},
 		},
+	}
+
+	if envoyConfig.EnableTracing {
+		var opName hcm.HttpConnectionManager_Tracing_OperationName
+		if envoyConfig.TracingOpName == "ingress" {
+			opName = hcm.HttpConnectionManager_Tracing_INGRESS
+		} else {
+			opName = hcm.HttpConnectionManager_Tracing_EGRESS
+		}
+
+		manager.Tracing = &hcm.HttpConnectionManager_Tracing{
+			OperationName: opName,
+			Verbose:       envoyConfig.TracingVerbose,
+		}
 	}
 
 	mgrPbStr, err := ptypes.MarshalAny(manager)

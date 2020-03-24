@@ -13,16 +13,19 @@ import (
 )
 
 func main() {
+	config := discovery.NewEmptyConfig()
+	config.ParseFlags()
+
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log.Init(logLevel, logFormat)
+	log.Init(config.Global.LogLevel, config.Global.LogFormat)
 
-	err := setupMetrics()
+	err := setupMetrics(config.Global)
 	if err != nil {
 		log.Global.WithError(err).Errorf("failed to initialize metrics subsystem")
 	}
 
-	exit := make(chan os.Signal)
+	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt)
 
 	shutdown, err := discovery.Start(ctx, config)
@@ -37,13 +40,13 @@ func main() {
 	cancel()
 }
 
-func setupMetrics() error {
-	if metricsSink == "" {
+func setupMetrics(config *discovery.GlobalConfig) error {
+	if config.MetricsSink == "" {
 		return nil
 	}
 
-	if metricsSink == "dogstatsd" {
-		sink, err := metrics.NewStatsdSink(statsdAddr, statsdPort, statsdNS)
+	if config.MetricsSink == "dogstatsd" {
+		sink, err := metrics.NewStatsdSink(config.DogstatsdAddr, config.DogstatsdPort, config.DogstatsdNS)
 		if err != nil {
 			return err
 		}
@@ -52,11 +55,11 @@ func setupMetrics() error {
 		return nil
 	}
 
-	if metricsSink == "stderr" {
+	if config.MetricsSink == "stderr" {
 		sink := metrics.NewFileSink(os.Stderr, "plain")
 		metrics.SetSink(sink)
 		return nil
 	}
 
-	return fmt.Errorf("unsupported metrics sink: %s", metricsSink)
+	return fmt.Errorf("unsupported metrics sink: %s", config.MetricsSink)
 }
