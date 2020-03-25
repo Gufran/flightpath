@@ -258,5 +258,200 @@ The backend can be configured using `-dogstatsd.*` parameters. See [Configuratio
      Number of listener entries pushed to XDS server
 
 
+### Runtime Metrics
+
+
+==`runtime.goroutines`==
+
+:    Gauge type
+     No tags
+
+     Number of active goroutines
+
+
+==`runtime.mem.alloc`==
+
+:    Gauge type
+     No tags
+
+     Bytes of allocated heap objects
+
+
+==`runtime.mem.total`==
+
+:    Gauge type
+     No tags
+
+     Cumulative bytes allocated for heap objects. It only increases when new heap objects are allocated but does not decrease when objects are freed
+
+
+==`runtime.mem.sys`==
+
+:    Gauge type
+     No tags
+
+     Total bytes of memory obtained from the OS
+
+
+==`runtime.mem.lookups`==
+
+:    Gauge type
+     No tags
+
+     Number of pointer lookups performed by the runtime
+
+
+==`runtime.mem.malloc`==
+
+:    Gauge type
+     No tags
+
+     Cumulative count of heap objects allocated
+
+
+==`runtime.mem.frees`==
+
+:    Gauge type
+     No tags
+
+     Cumulative count of heap objects freed
+
+
+==`runtime.mem.heap.alloc`==
+
+:    Gauge type
+     No tags
+
+     Bytes of allocated heap objects including the unreachable objects that haven't been garbage collected
+
+
+==`runtime.mem.heap.sys`==
+
+:    Gauge type
+     No tags
+
+     Bytes of heap memory obtained from the OS
+
+
+==`runtime.mem.heap.idle`==
+
+:    Gauge type
+     No tags
+
+     Bytes in unused memory spans
+
+
+==`runtime.mem.heap.inuse`==
+
+:    Gauge type
+     No tags
+
+     Bytes in in-use spans
+
+
+==`runtime.mem.heap.released`==
+
+:    Gauge type
+     No tags
+
+     Bytes of physical memory returned to the OS
+
+
+==`runtime.mem.heap.objects`==
+
+:    Gauge type
+     No tags
+
+     Number of allocated heap objects
+
+
+==`runtime.mem.stack.inuse`==
+
+:    Gauge type
+     No tags
+
+     Bytes in stack span
+
+
+==`runtime.mem.stack.sys`==
+
+:    Gauge type
+     No tags
+
+     Bytes of stack memory obtained from the OS
+
+
+==`runtime.mem.stack.mcache_inuse`==
+
+:    Gauge type
+     No tags
+
+     Bytes of allocated mcache structures
+
+
+==`runtime.mem.stack.mcache_sys`==
+
+:    Gauge type
+     No tags
+
+     Bytes of memory obtained from the OS for mcache structures
+
+
+==`runtime.mem.othersys`==
+
+:    Gauge type
+     No tags
+
+     Bytes of memory in off-heap runtime allocations
+
+
+==`runtime.gc.sys`==
+
+:    Gauge type
+     No tags
+
+     Bytes of memory in garbage collection metadata
+
+
+==`runtime.gc.next`==
+
+:    Gauge type
+     No tags
+
+     Target heap size of next GC cycle
+
+
+==`runtime.gc.last`==
+
+:    Gauge type
+     No tags
+
+     Time when last garbage collection finished, represented as nanoseconds since UNIX epoch
+
+
+==`runtime.gc.pause_total_ns`==
+
+:    Gauge type
+     No tags
+
+     Cumulative nanoseconds in GC stop-the-workd pauses since the program started
+
+
+==`runtime.gc.pause`==
+
+:    Gauge type
+     No tags
+
+     Time in nanoseconds of recent GC stop-the-world pause
+
+
+==`runtime.gc.count`==
+
+:    Gauge type
+     No tags
+
+     Number of completed GC cycles
+
+
 
 [Configuration]: ./configuration.md

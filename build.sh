@@ -19,7 +19,7 @@ function native() { # Build binary for host OS and architecture
 }
 
 function gen-usage-doc() { # Update the usage documentation page
-  go run -tags docs doc.go flags.go >site/usage.md
+  go run -tags docs doc.go >site/usage.md
 }
 
 function docs() { # Generate documentation or serve local site

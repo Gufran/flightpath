@@ -28,7 +28,7 @@ Following command line flags can be used to configure flightpath
 
 ==`-debug`==
 
-:    Default `"true"`
+:    Default `"false"`
 
      Start debug HTTP server on loopback interface
 
@@ -68,6 +68,24 @@ Following command line flags can be used to configure flightpath
 
      Port used by Envoy Listener
 
+==`-envoy.tracing.enabled`==
+
+:    Default `"false"`
+
+     Enable request tracing on envoy
+
+==`-envoy.tracing.op-name`==
+
+:    Default `"egress"`
+
+     Tracing operation name, valid values are 'ingress' or 'egress'
+
+==`-envoy.tracing.verbose`==
+
+:    Default `"false"`
+
+     Add verbose information to traces
+
 ==`-log.format`==
 
 :    Default `"json"`
@@ -79,6 +97,12 @@ Following command line flags can be used to configure flightpath
 :    Default `"INFO"`
 
      Set log verbosity. Valid options are trace, debug, error, warn, info, fatal and panic
+
+==`-metrics.runtime`==
+
+:    Default `"true"`
+
+     Expose runtime stats on memory and CPU
 
 ==`-metrics.sink`==
 

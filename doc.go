@@ -5,6 +5,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Gufran/flightpath/discovery"
 )
 
 const (
@@ -19,6 +20,9 @@ Following command line flags can be used to configure flightpath
 )
 
 func main() {
+	config := discovery.NewEmptyConfig()
+	config.ParseFlags()
+
 	fmt.Print(header)
 	flag.CommandLine.VisitAll(printUsage)
 }
