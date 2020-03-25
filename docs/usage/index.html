@@ -370,7 +370,7 @@
 </dd>
 <dt><mark><code>-debug</code></mark></dt>
 <dd>
-<p>Default <code>"true"</code></p>
+<p>Default <code>"false"</code></p>
 <p>Start debug HTTP server on loopback interface</p>
 </dd>
 <dt><mark><code>-debug.port</code></mark></dt>
@@ -403,6 +403,21 @@
 <p>Default <code>"9292"</code></p>
 <p>Port used by Envoy Listener</p>
 </dd>
+<dt><mark><code>-envoy.tracing.enabled</code></mark></dt>
+<dd>
+<p>Default <code>"false"</code></p>
+<p>Enable request tracing on envoy</p>
+</dd>
+<dt><mark><code>-envoy.tracing.op-name</code></mark></dt>
+<dd>
+<p>Default <code>"egress"</code></p>
+<p>Tracing operation name, valid values are 'ingress' or 'egress'</p>
+</dd>
+<dt><mark><code>-envoy.tracing.verbose</code></mark></dt>
+<dd>
+<p>Default <code>"false"</code></p>
+<p>Add verbose information to traces</p>
+</dd>
 <dt><mark><code>-log.format</code></mark></dt>
 <dd>
 <p>Default <code>"json"</code></p>
@@ -412,6 +427,11 @@
 <dd>
 <p>Default <code>"INFO"</code></p>
 <p>Set log verbosity. Valid options are trace, debug, error, warn, info, fatal and panic</p>
+</dd>
+<dt><mark><code>-metrics.runtime</code></mark></dt>
+<dd>
+<p>Default <code>"true"</code></p>
+<p>Expose runtime stats on memory and CPU</p>
 </dd>
 <dt><mark><code>-metrics.sink</code></mark></dt>
 <dd>

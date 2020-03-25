@@ -2,37 +2,37 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
      <loc>https://docs.flightpath.xyz/</loc>
-     <lastmod>2020-03-13</lastmod>
+     <lastmod>2020-03-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
      <loc>https://docs.flightpath.xyz/getting-started/</loc>
-     <lastmod>2020-03-13</lastmod>
+     <lastmod>2020-03-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
      <loc>https://docs.flightpath.xyz/route-discovery/</loc>
-     <lastmod>2020-03-13</lastmod>
+     <lastmod>2020-03-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
      <loc>https://docs.flightpath.xyz/usage/</loc>
-     <lastmod>2020-03-13</lastmod>
+     <lastmod>2020-03-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
      <loc>https://docs.flightpath.xyz/configuration/</loc>
-     <lastmod>2020-03-13</lastmod>
+     <lastmod>2020-03-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
      <loc>https://docs.flightpath.xyz/observability/</loc>
-     <lastmod>2020-03-13</lastmod>
+     <lastmod>2020-03-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
      <loc>https://docs.flightpath.xyz/error-messages/</loc>
-     <lastmod>2020-03-13</lastmod>
+     <lastmod>2020-03-25</lastmod>
      <changefreq>daily</changefreq>
     </url>
 </urlset>

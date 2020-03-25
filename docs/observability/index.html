@@ -357,6 +357,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#runtime-metrics" class="md-nav__link">
+    Runtime Metrics
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -444,6 +451,13 @@
           <li class="md-nav__item">
   <a href="#xds-server-metrics" class="md-nav__link">
     XDS Server Metrics
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-metrics" class="md-nav__link">
+    Runtime Metrics
   </a>
   
 </li>
@@ -686,6 +700,153 @@ JSON format and metrics are exposed only for Dogstatsd backend.</p>
 <p>Gauge type<br />
  No tags</p>
 <p>Number of listener entries pushed to XDS server</p>
+</dd>
+</dl>
+<h3 id="runtime-metrics">Runtime Metrics<a class="headerlink" href="#runtime-metrics" title="Permanent link">&para;</a></h3>
+<dl>
+<dt><mark><code>runtime.goroutines</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Number of active goroutines</p>
+</dd>
+<dt><mark><code>runtime.mem.alloc</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes of allocated heap objects</p>
+</dd>
+<dt><mark><code>runtime.mem.total</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Cumulative bytes allocated for heap objects. It only increases when new heap objects are allocated but does not decrease when objects are freed</p>
+</dd>
+<dt><mark><code>runtime.mem.sys</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Total bytes of memory obtained from the OS</p>
+</dd>
+<dt><mark><code>runtime.mem.lookups</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Number of pointer lookups performed by the runtime</p>
+</dd>
+<dt><mark><code>runtime.mem.malloc</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Cumulative count of heap objects allocated</p>
+</dd>
+<dt><mark><code>runtime.mem.frees</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Cumulative count of heap objects freed</p>
+</dd>
+<dt><mark><code>runtime.mem.heap.alloc</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes of allocated heap objects including the unreachable objects that haven't been garbage collected</p>
+</dd>
+<dt><mark><code>runtime.mem.heap.sys</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes of heap memory obtained from the OS</p>
+</dd>
+<dt><mark><code>runtime.mem.heap.idle</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes in unused memory spans</p>
+</dd>
+<dt><mark><code>runtime.mem.heap.inuse</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes in in-use spans</p>
+</dd>
+<dt><mark><code>runtime.mem.heap.released</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes of physical memory returned to the OS</p>
+</dd>
+<dt><mark><code>runtime.mem.heap.objects</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Number of allocated heap objects</p>
+</dd>
+<dt><mark><code>runtime.mem.stack.inuse</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes in stack span</p>
+</dd>
+<dt><mark><code>runtime.mem.stack.sys</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes of stack memory obtained from the OS</p>
+</dd>
+<dt><mark><code>runtime.mem.stack.mcache_inuse</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes of allocated mcache structures</p>
+</dd>
+<dt><mark><code>runtime.mem.stack.mcache_sys</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes of memory obtained from the OS for mcache structures</p>
+</dd>
+<dt><mark><code>runtime.mem.othersys</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes of memory in off-heap runtime allocations</p>
+</dd>
+<dt><mark><code>runtime.gc.sys</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Bytes of memory in garbage collection metadata</p>
+</dd>
+<dt><mark><code>runtime.gc.next</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Target heap size of next GC cycle</p>
+</dd>
+<dt><mark><code>runtime.gc.last</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Time when last garbage collection finished, represented as nanoseconds since UNIX epoch</p>
+</dd>
+<dt><mark><code>runtime.gc.pause_total_ns</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Cumulative nanoseconds in GC stop-the-workd pauses since the program started</p>
+</dd>
+<dt><mark><code>runtime.gc.pause</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Time in nanoseconds of recent GC stop-the-world pause</p>
+</dd>
+<dt><mark><code>runtime.gc.count</code></mark></dt>
+<dd>
+<p>Gauge type
+ No tags</p>
+<p>Number of completed GC cycles</p>
 </dd>
 </dl>
                 
