@@ -20,7 +20,7 @@ func main() {
 
 	log.Init(config.Global.LogLevel, config.Global.LogFormat)
 
-	err := setupMetrics(config.Global)
+	err := setupMetrics(ctx, config.Global)
 	if err != nil {
 		log.Global.WithError(err).Errorf("failed to initialize metrics subsystem")
 	}
@@ -40,7 +40,7 @@ func main() {
 	cancel()
 }
 
-func setupMetrics(config *discovery.GlobalConfig) error {
+func setupMetrics(ctx context.Context, config *discovery.GlobalConfig) error {
 	if config.MetricsSink == "" {
 		return nil
 	}
@@ -52,6 +52,7 @@ func setupMetrics(config *discovery.GlobalConfig) error {
 		}
 
 		metrics.SetSink(sink)
+		metrics.EnableRuntimeMetrics(ctx)
 		return nil
 	}
 

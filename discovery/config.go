@@ -27,12 +27,13 @@ func NewEmptyConfig() *Config {
 }
 
 type GlobalConfig struct {
-	LogLevel      string
-	LogFormat     string
-	MetricsSink   string
-	DogstatsdAddr string
-	DogstatsdPort int
-	DogstatsdNS   string
+	LogLevel             string
+	LogFormat            string
+	MetricsSink          string
+	EnableRuntimeMetrics bool
+	DogstatsdAddr        string
+	DogstatsdPort        int
+	DogstatsdNS          string
 }
 
 type XDS struct {
@@ -77,6 +78,7 @@ func (c *Config) ParseFlags() {
 	flag.StringVar(&c.Global.LogLevel, "log.level", "INFO", "Set log verbosity. Valid options are trace, debug, error, warn, info, fatal and panic")
 	flag.StringVar(&c.Global.LogFormat, "log.format", "json", "Format of the log message. Valid options are json and plain")
 	flag.StringVar(&c.Global.MetricsSink, "metrics.sink", "", "Set the metrics sink. Valid options are 'dogstatsd' and 'stderr'")
+	flag.BoolVar(&c.Global.EnableRuntimeMetrics, "metrics.runtime", true, "Expose runtime stats on memory and CPU")
 	flag.StringVar(&c.Global.DogstatsdAddr, "dogstatsd.addr", "127.0.0.1", "Address of the dogstatsd agent")
 	flag.IntVar(&c.Global.DogstatsdPort, "dogstatsd.port", 8125, "Port of the dogstatsd agent")
 	flag.StringVar(&c.Global.DogstatsdNS, "dogstatsd.namespace", "flightpath", "Metrics namespace for dogstatsd")
