@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.0.3
+
+This is a catch up release to fix the CI builds that were broken by enabling
+vendoring mode on build and tests. It does not contain any change in code
+apart from removing `-mod=vendor` from build script.
+
+Use this release over `0.0.2` as the previous automated build did not
+publish all artifacts.
+
 ## v0.0.2
 
 ### Added
