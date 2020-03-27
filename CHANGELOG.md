@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.4
+
+### Fixed
+
+ - Run loop to emit runtime metrics in a separate goroutine
+ - Only enable runtime metrics when the argument is set
+
 ## v0.0.3
 
 This is a catch up release to fix the CI builds that were broken by enabling
