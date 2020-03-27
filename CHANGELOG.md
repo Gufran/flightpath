@@ -1,6 +1,22 @@
 # Changelog
 
-## Unreleased
+## v0.0.2
+
+### Added
+
+ - Flightpath exposes go runtime telemetry to metrics sink if enabled
+ - Flightpath can configure Envoy to initiate request tracing if enabled
+ - Added example systemd unit files in `contrib/systemd`
+ - Improved sample Envoy configuration file
+   - Demonstrate metrics and tracing configuration
+   - Static health check endpoint that does not rely on admin inteface
+   - Configuration to tag metrics
+
+### Changed
+
+ - Debug server no longer runs by default
+
+## v0.0.1
 
 ### Added
 

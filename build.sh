@@ -15,7 +15,7 @@ ld_vars="-X ${project}/version.Commit=${commit_hash} -X ${project}/version.Build
 ldflags="-s -w -extldflags \"-static\" ${ld_vars}"
 
 function native() { # Build binary for host OS and architecture
-  go build -a -o flightpath -ldflags "${ldflags}"
+  go build -a -mod vendor -o flightpath -ldflags "${ldflags}"
 }
 
 function gen-usage-doc() { # Update the usage documentation page
@@ -43,7 +43,7 @@ function allarch() { # Build binaries for all supported OS
       "golang:${go_version}" \
       env \
       CGO_ENABLED=0 GOOS="${os}" GOARCH=amd64 \
-      go build -a -o "_build/flightpath-${os}-amd64" -ldflags "${ldflags}"
+      go build -a -mod vendor -o "_build/flightpath-${os}-amd64" -ldflags "${ldflags}"
   done
 }
 
