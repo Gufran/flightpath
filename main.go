@@ -52,7 +52,11 @@ func setupMetrics(ctx context.Context, config *discovery.GlobalConfig) error {
 		}
 
 		metrics.SetSink(sink)
-		metrics.EnableRuntimeMetrics(ctx)
+
+		if config.EnableRuntimeMetrics {
+			go metrics.EnableRuntimeMetrics(ctx)
+		}
+		
 		return nil
 	}
 
