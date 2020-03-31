@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/consul/api"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -270,7 +271,7 @@ func TestCluster_Endpoints(t *testing.T) {
 					isConnect:   true,
 					addr:        "2.1",
 					port:        21,
-					routing: map[string][]string{},
+					routing:     map[string][]string{},
 				},
 				{
 					name:        "case-2-id-2",
@@ -278,7 +279,7 @@ func TestCluster_Endpoints(t *testing.T) {
 					isConnect:   true,
 					addr:        "2.2",
 					port:        22,
-					routing: map[string][]string{},
+					routing:     map[string][]string{},
 				},
 			},
 		},
@@ -287,5 +288,111 @@ func TestCluster_Endpoints(t *testing.T) {
 	for idx, test := range tests {
 		result := test.cluster.Endpoints()
 		assert.ElementsMatch(t, result, test.expect, "Case %d", idx)
+	}
+}
+
+func TestDecodeClusterSettings(t *testing.T) {
+	tests := []struct {
+		cluster *Cluster
+		expect  *ClusterSettings
+	}{
+		{
+			cluster: &Cluster{
+				services: []*api.CatalogService{
+					{
+						CreateIndex: 3,
+						ServiceMeta: map[string]string{},
+					},
+					{
+						CreateIndex: 1,
+						ServiceMeta: map[string]string{},
+					},
+					{
+						CreateIndex: 5,
+						ServiceMeta: map[string]string{
+							"flightpath-cluster-conn_timeout":           "16",
+							"flightpath-cluster-tcp_keepalive_time":     "77",
+							"flightpath-cluster-tcp_keepalive_interval": "56",
+							"flightpath-retry-on":                       "5xx",
+						},
+					},
+					{
+						CreateIndex: 2,
+						ServiceMeta: map[string]string{},
+					},
+				},
+			},
+			expect: &ClusterSettings{
+				ConnTimeout:          16,
+				PerConnBufLimitBytes: 32768,
+				MaxReqPerConn:        10000,
+				TcpKeepaliveProbes:   9,
+				TcpKeepaliveTime:     77,
+				TcpKeepaliveInterval: 56,
+				RetryOn:              "5xx",
+				RetryAttempts:        3,
+				RetryAttemptTimeout:  5,
+				RetryBackoffBase:     1,
+				RetryBackoffMax:      6,
+			},
+		},
+		{
+			cluster: &Cluster{
+				services: []*api.CatalogService{
+					{
+						CreateIndex: 3,
+						ServiceMeta: map[string]string{},
+					},
+					{
+						CreateIndex: 1,
+						ServiceMeta: map[string]string{},
+					},
+					{
+						CreateIndex: 5,
+						ServiceMeta: map[string]string{
+							"flightpath-cluster-conn_timeout":             "16",
+							"flightpath-cluster-per_conn_buf_limit_bytes": "1212",
+							"flightpath-cluster-max_req_per_conn":         "33",
+							"flightpath-cluster-tcp_keepalive_probes":     "7",
+							"flightpath-cluster-tcp_keepalive_time":       "77",
+							"flightpath-cluster-tcp_keepalive_interval":   "56",
+							"flightpath-retry-on":                         "5xx,gateway-error",
+							"flightpath-retry-attempts":                   "4",
+							"flightpath-retry-per_try_timeout":            "8",
+							"flightpath-retry-backoff_base_interval":      "2",
+							"flightpath-retry-backoff_max_interval":       "11",
+						},
+					},
+					{
+						CreateIndex: 2,
+						ServiceMeta: map[string]string{},
+					},
+				},
+			},
+			expect: &ClusterSettings{
+				ConnTimeout:          16,
+				PerConnBufLimitBytes: 1212,
+				MaxReqPerConn:        33,
+				TcpKeepaliveProbes:   7,
+				TcpKeepaliveTime:     77,
+				TcpKeepaliveInterval: 56,
+				RetryOn:              "5xx,gateway-error",
+				RetryAttempts:        4,
+				RetryAttemptTimeout:  8,
+				RetryBackoffBase:     2,
+				RetryBackoffMax:      11,
+			},
+		},
+	}
+
+	for idx, test := range tests {
+		settings, err := test.cluster.Settings()
+		if err != nil {
+			t.Errorf("case %d: failed to decode cluster settings. %s", idx, err)
+		}
+
+		if !cmp.Equal(settings, test.expect) {
+			t.Errorf("case %d: unexpected result. %s", idx, cmp.Diff(settings, test.expect))
+		}
 	}
 }

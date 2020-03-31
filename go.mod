@@ -19,6 +19,7 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/miekg/dns v1.0.15 // indirect
+	github.com/mitchellh/mapstructure v1.2.2
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
