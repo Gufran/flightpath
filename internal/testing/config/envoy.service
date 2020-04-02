@@ -1,0 +1,13 @@
+[Unit]
+Requires = network-online.target
+
+[Service]
+User = vagrant
+Group = vagrant
+KillMode = process
+
+ExecStart = /usr/bin/envoy --log-level DEBUG --config-path /etc/envoy.yaml
+LimitNOFILE = 65536
+
+[Install]
+WantedBy = multi-user.target

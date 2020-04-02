@@ -1,0 +1,13 @@
+[Unit]
+Requires = network-online.target
+After = consul.service
+
+[Service]
+User = vagrant
+Group = vagrant
+KillMode = process
+
+ExecStart = /usr/bin/flightpath -debug -metrics.sink stderr
+
+[Install]
+WantedBy = multi-user.target

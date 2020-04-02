@@ -1,0 +1,13 @@
+[Unit]
+Requires = network-online.target
+After = consul.service
+
+[Service]
+User = root
+Group = root
+KillMode = process
+
+ExecStart = /usr/bin/nomad agent -dev -bind 0.0.0.0 -consul-checks-use-advertise
+
+[Install]
+WantedBy = multi-user.target

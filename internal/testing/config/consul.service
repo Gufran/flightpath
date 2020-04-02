@@ -1,0 +1,12 @@
+[Unit]
+Requires = network-online.target
+
+[Service]
+User = vagrant
+Group = vagrant
+KillMode = process
+
+ExecStart = /usr/bin/consul agent -dev -client 0.0.0.0
+
+[Install]
+WantedBy = multi-user.target

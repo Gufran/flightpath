@@ -16,3 +16,4 @@ _build
 pkg
 tmp.*
 .DS_Store
+.vagrant
