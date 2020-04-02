@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.0.5 (Unreleased)
+
+### Breaking Changes
+
+ - `-envoy.access-logs` has been changed to `-envoy.http.access-logs`
+
+### Added
+
+ - Command line options to change the Envoy listener configuration
+   - See all `-envoy.listen.*` and `-envoy.http.*` options for Listener and HTTP manager configuration that can be changed
+ - Upstream cluster and route configuration can be controlled using service metadata in consul catalog
+ - A vagrant configuration is now available to run flightpath e2e tests
+
 ## v0.0.4
 
 ### Fixed
