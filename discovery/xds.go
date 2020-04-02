@@ -14,7 +14,6 @@ import (
 	accesslogconfig "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
 	accesslogfilter "github.com/envoyproxy/go-control-plane/envoy/config/filter/accesslog/v2"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/http_connection_manager/v2"
-	envoytype "github.com/envoyproxy/go-control-plane/envoy/type"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes"
@@ -133,7 +132,7 @@ func putCache(snc cache.SnapshotCache, envoyConfig *EnvoyConfig, clusters []cata
 	defer metrics.Timed("discovery.cache.put_ns", time.Now(), nil)
 
 	vhosts := vhostPool{
-		mappings: map[string][]vhostInfo{},
+		vhs: []vhost{},
 	}
 
 	envoyListener, err := buildListener("flightpath", envoyConfig)
@@ -146,7 +145,7 @@ func putCache(snc cache.SnapshotCache, envoyConfig *EnvoyConfig, clusters []cata
 	}
 
 	for _, service := range clusters {
-		clusterConfig := buildCluster(service.Name())
+		clusterConfig := buildCluster(service)
 
 		if service.IsConnectEnabled() {
 			clusterConfig.TransportSocket, err = buildTransportSocket(tls)
@@ -180,20 +179,17 @@ func putCache(snc cache.SnapshotCache, envoyConfig *EnvoyConfig, clusters []cata
 	return snc.SetSnapshot(envoyConfig.NodeName, snap)
 }
 
-func buildCluster(serviceName string) *envoyapiv2.Cluster {
-	return &envoyapiv2.Cluster{
-		Name:                          serviceName,
+func buildCluster(service catalog.ClusterInfo) *envoyapiv2.Cluster {
+	cluster := &envoyapiv2.Cluster{
+		Name:                          service.Name(),
 		LbPolicy:                      envoyapiv2.Cluster_ROUND_ROBIN,
 		RespectDnsTtl:                 true,
 		DrainConnectionsOnHostRemoval: true,
-		ConnectTimeout: &duration.Duration{
-			Seconds: 10,
-		},
 		ClusterDiscoveryType: &envoyapiv2.Cluster_Type{
 			Type: envoyapiv2.Cluster_EDS,
 		},
 		EdsClusterConfig: &envoyapiv2.Cluster_EdsClusterConfig{
-			ServiceName: serviceName,
+			ServiceName: service.Name(),
 			EdsConfig: &core.ConfigSource{
 				ConfigSourceSpecifier: &core.ConfigSource_ApiConfigSource{
 					ApiConfigSource: &core.ApiConfigSource{
@@ -212,6 +208,42 @@ func buildCluster(serviceName string) *envoyapiv2.Cluster {
 			},
 		},
 	}
+
+	settings, err := service.Settings()
+	if err != nil {
+		logger.WithError(err).
+			WithField("service", service.Name()).
+			Errorf("failed to load cluster settings")
+		return cluster
+	}
+
+	cluster.ConnectTimeout = &duration.Duration{
+		Seconds: settings.ConnTimeout,
+	}
+
+	cluster.PerConnectionBufferLimitBytes = &wrappers.UInt32Value{
+		Value: settings.PerConnBufLimitBytes,
+	}
+
+	cluster.MaxRequestsPerConnection = &wrappers.UInt32Value{
+		Value: settings.MaxReqPerConn,
+	}
+
+	cluster.UpstreamConnectionOptions = &envoyapiv2.UpstreamConnectionOptions{
+		TcpKeepalive: &core.TcpKeepalive{
+			KeepaliveProbes: &wrappers.UInt32Value{
+				Value: settings.TcpKeepaliveProbes,
+			},
+			KeepaliveTime: &wrappers.UInt32Value{
+				Value: settings.TcpKeepaliveTime,
+			},
+			KeepaliveInterval: &wrappers.UInt32Value{
+				Value: settings.TcpKeepaliveInterval,
+			},
+		},
+	}
+
+	return cluster
 }
 
 func buildListener(name string, envoyConfig *EnvoyConfig) (*envoyapiv2.Listener, error) {
@@ -220,7 +252,7 @@ func buildListener(name string, envoyConfig *EnvoyConfig) (*envoyapiv2.Listener,
 		return nil, fmt.Errorf("failed to build ListenerFilterChain. %s", err)
 	}
 
-	return &envoyapiv2.Listener{
+	l := &envoyapiv2.Listener{
 		Name: name,
 		Address: &core.Address{
 			Address: &core.Address_SocketAddress{
@@ -234,7 +266,28 @@ func buildListener(name string, envoyConfig *EnvoyConfig) (*envoyapiv2.Listener,
 			},
 		},
 		FilterChains: filterChain,
-	}, nil
+	}
+
+	l.DrainType = envoyapiv2.Listener_DEFAULT
+	if envoyConfig.ListenerDrainType == "modified" {
+		l.DrainType = envoyapiv2.Listener_MODIFY_ONLY
+	}
+
+	l.Transparent = &wrappers.BoolValue{
+		Value: envoyConfig.ListenTransparent,
+	}
+
+	if envoyConfig.ListenTcpFastOpenQueueLength >= 0 {
+		l.TcpFastOpenQueueLength = &wrappers.UInt32Value{
+			Value: uint32(envoyConfig.ListenTcpFastOpenQueueLength),
+		}
+	}
+
+	l.PerConnectionBufferLimitBytes = &wrappers.UInt32Value{
+		Value: uint32(envoyConfig.ListenerPerConnBufLimitBytes),
+	}
+
+	return l, nil
 }
 
 func buildTransportSocket(tls catalog.TLSInfo) (*core.TransportSocket, error) {
@@ -281,7 +334,7 @@ func buildFilterChains(envoyConfig *EnvoyConfig) ([]*listener.FilterChain, error
 
 	// See: https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log#config-access-log-default-format
 	accessLogger := &accesslogconfig.FileAccessLog{
-		Path: envoyConfig.AccessLogPath,
+		Path: envoyConfig.HttpAccessLogPath,
 		AccessLogFormat: &accesslogconfig.FileAccessLog_JsonFormat{
 			JsonFormat: &structpb.Struct{
 				Fields: map[string]*structpb.Value{
@@ -314,9 +367,15 @@ func buildFilterChains(envoyConfig *EnvoyConfig) ([]*listener.FilterChain, error
 	}
 
 	manager := &hcm.HttpConnectionManager{
-		ServerName: "LadyLuck",
-		CodecType:  hcm.HttpConnectionManager_AUTO,
-		StatPrefix: "http",
+		ServerName:                "LadyLuck",
+		CodecType:                 hcm.HttpConnectionManager_AUTO,
+		StatPrefix:                "http",
+		IdleTimeout:               &duration.Duration{Seconds: envoyConfig.HttpIdleTimeout},
+		StreamIdleTimeout:         &duration.Duration{Seconds: envoyConfig.HttpStreamIdleTimeout},
+		RequestTimeout:            &duration.Duration{Seconds: envoyConfig.HttpRequestTimeout},
+		DrainTimeout:              &duration.Duration{Seconds: envoyConfig.HttpDrainTimeout},
+		DelayedCloseTimeout:       &duration.Duration{Seconds: envoyConfig.HttpDelayedCloseTimeout},
+		PreserveExternalRequestId: envoyConfig.HttpPreserveExtReqId,
 		RouteSpecifier: &hcm.HttpConnectionManager_Rds{
 			Rds: &hcm.Rds{
 				RouteConfigName: "upstream",
@@ -377,6 +436,8 @@ func buildEndpoints(endpoints []catalog.Endpoint) []*endpoint.LocalityLbEndpoint
 	var results []*endpoint.LocalityLbEndpoints
 	for _, e := range endpoints {
 		epdef := &endpoint.LocalityLbEndpoints{
+			// TODO: configure LoadBalancingWeight from consul catalog
+			//    service weight.
 			LbEndpoints: []*endpoint.LbEndpoint{
 				{
 					HostIdentifier: &endpoint.LbEndpoint_Endpoint{
@@ -438,12 +499,12 @@ func buildRouteMatchSpec(r string) *route.RouteMatch {
 	return matcher
 }
 
-func buildClusterRoutingAction(cluster string) *route.Route_Route {
+func buildClusterRoutingAction(config *vhostInfo) *route.Route_Route {
 	return &route.Route_Route{
 		Route: &route.RouteAction{
 			ClusterNotFoundResponseCode: route.RouteAction_SERVICE_UNAVAILABLE,
 			ClusterSpecifier: &route.RouteAction_Cluster{
-				Cluster: cluster,
+				Cluster: config.clusterName,
 			},
 		},
 	}
@@ -454,76 +515,94 @@ type vhostInfo struct {
 	endpointName string
 	paths        []string
 }
+
+type vhost struct {
+	routes   map[string][]vhostInfo
+	settings *catalog.ClusterSettings
+}
+
 type vhostPool struct {
-	mappings map[string][]vhostInfo
+	vhs []vhost
 }
 
 func (v *vhostPool) add(c catalog.ClusterInfo) {
+	settings, err := c.Settings()
+	if err != nil {
+		logger.WithError(err).WithField("cluster", c.Name()).
+			Error("failed to load cluster settings. using default values for virtualhost")
+		settings = &catalog.ClusterSettings{}
+		settings.Canonicalize()
+	}
+
+	vhs := vhost{
+		routes:   map[string][]vhostInfo{},
+		settings: settings,
+	}
+
 	for _, e := range c.Endpoints() {
 		for domain, paths := range e.RoutingInfo() {
-			v.mappings[domain] = append(v.mappings[domain], vhostInfo{
+			vhs.routes[domain] = append(vhs.routes[domain], vhostInfo{
 				clusterName:  c.Name(),
 				endpointName: e.Name(),
 				paths:        paths,
 			})
 		}
 	}
+
+	v.vhs = append(v.vhs, vhs)
 }
 
 func (v *vhostPool) collect(proxyPort int) []*route.VirtualHost {
-	var vhs []*route.VirtualHost
-	for domain, routes := range v.mappings {
-		target := &route.VirtualHost{
-			Name:                       "vh-" + domain,
-			Domains:                    []string{domain, fmt.Sprintf("%s:%d", domain, proxyPort)},
-			IncludeRequestAttemptCount: true,
-			Routes:                     []*route.Route{},
-			RetryPolicy: &route.RetryPolicy{
-				RetryOn:                       "gateway-error",
-				HostSelectionRetryMaxAttempts: 3,
-				NumRetries: &wrappers.UInt32Value{
-					Value: 3,
-				},
-				PerTryTimeout: &duration.Duration{
-					Seconds: 1,
-				},
-				RetryHostPredicate: []*route.RetryPolicy_RetryHostPredicate{
-					{
-						Name: "envoy.retry_host_predicates.previous_hosts",
+	var virtualHosts []*route.VirtualHost
+	for _, vh := range v.vhs {
+		for domain, routes := range vh.routes {
+			target := &route.VirtualHost{
+				Name:                       "vh-" + domain,
+				// TODO: Envoy fails to match the domain if the client
+				//   sends the Host header with port in it. for the time
+				//   we match on the bare domain as well as on the domain
+				//   with the port number on it, but this should be removed
+				//   when the behaviour is improved in Envoy.
+				// See: https://github.com/envoyproxy/envoy/issues/886
+				Domains:                    []string{domain, fmt.Sprintf("%s:%d", domain, proxyPort)},
+				IncludeRequestAttemptCount: true,
+				Routes:                     []*route.Route{},
+			}
+
+			if vh.settings.RetryOn != "" {
+				target.RetryPolicy = &route.RetryPolicy{
+					RetryOn:                       vh.settings.RetryOn,
+					HostSelectionRetryMaxAttempts: 3,
+					NumRetries:                    &wrappers.UInt32Value{Value: vh.settings.RetryAttempts},
+					PerTryTimeout:                 &duration.Duration{Seconds: vh.settings.RetryAttemptTimeout},
+					RetryHostPredicate: []*route.RetryPolicy_RetryHostPredicate{
+						{Name: "envoy.retry_host_predicates.previous_hosts"},
 					},
-				},
-			},
-		}
+					RetryBackOff: &route.RetryPolicy_RetryBackOff{
+						BaseInterval: &duration.Duration{Seconds: vh.settings.RetryBackoffBase},
+						MaxInterval:  &duration.Duration{Seconds: vh.settings.RetryBackoffMax},
+					},
+				}
+			}
 
-		for _, vhinfo := range routes {
-			// TODO: Envoy fails to match the domain if the client
-			//   sends the Host header with port in it. for the time
-			//   we match on the bare domain as well as on the domain
-			//   with the port number on it, but this should be removed
-			//   when the behaviour is improved in Envoy.
-			// See: https://github.com/envoyproxy/envoy/issues/886
-			target.Routes = append(target.Routes, buildVirtualHostRoutes(vhinfo.clusterName, vhinfo.endpointName, vhinfo.paths)...)
-		}
+			for _, vhinfo := range routes {
+				target.Routes = append(target.Routes, buildVirtualHostRoutes(&vhinfo)...)
+			}
 
-		vhs = append(vhs, target)
+			virtualHosts = append(virtualHosts, target)
+		}
 	}
 
-	return vhs
+	return virtualHosts
 }
 
-func buildVirtualHostRoutes(clusterName string, endpointName string, paths []string) []*route.Route {
+func buildVirtualHostRoutes(config *vhostInfo) []*route.Route {
 	var routes []*route.Route
-	for idx, pat := range paths {
+	for idx, pat := range config.paths {
 		routes = append(routes, &route.Route{
-			Name:   fmt.Sprintf("%s.%s-%d", clusterName, endpointName, idx),
+			Name:   fmt.Sprintf("%s.%s-%d", config.clusterName, config.endpointName, idx),
 			Match:  buildRouteMatchSpec(pat),
-			Action: buildClusterRoutingAction(clusterName),
-			Tracing: &route.Tracing{
-				OverallSampling: &envoytype.FractionalPercent{
-					Numerator:   1000,
-					Denominator: envoytype.FractionalPercent_TEN_THOUSAND,
-				},
-			},
+			Action: buildClusterRoutingAction(config),
 		})
 	}
 	return routes
