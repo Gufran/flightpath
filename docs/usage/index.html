@@ -393,15 +393,65 @@
 <p>Default <code>"8125"</code></p>
 <p>Port of the dogstatsd agent</p>
 </dd>
-<dt><mark><code>-envoy.access-logs</code></mark></dt>
+<dt><mark><code>-envoy.http.access-logs</code></mark></dt>
 <dd>
 <p>Default <code>"/var/log/envoy/access.log"</code></p>
 <p>Path to the file where envoy will write listener access logs</p>
+</dd>
+<dt><mark><code>-envoy.http.delayed-close-timeout</code></mark></dt>
+<dd>
+<p>Default <code>"1"</code></p>
+<p>Number of seconds to wait for closing the connection after peer closes from their side</p>
+</dd>
+<dt><mark><code>-envoy.http.drain-timeout</code></mark></dt>
+<dd>
+<p>Default <code>"30"</code></p>
+<p>Number of seconds to wait for HTTP/2 to shut down after sending GOAWAY frame</p>
+</dd>
+<dt><mark><code>-envoy.http.idle-timeout</code></mark></dt>
+<dd>
+<p>Default <code>"15"</code></p>
+<p>Number of seconds after which an idle connection is cleaned up</p>
+</dd>
+<dt><mark><code>-envoy.http.preserve-req-id</code></mark></dt>
+<dd>
+<p>Default <code>"true"</code></p>
+<p>Preserve external request ID if set in headers</p>
+</dd>
+<dt><mark><code>-envoy.http.req-timeout</code></mark></dt>
+<dd>
+<p>Default <code>"30"</code></p>
+<p>Number of seconds to wait for the entire request to be received</p>
+</dd>
+<dt><mark><code>-envoy.http.stream-idle-timeout</code></mark></dt>
+<dd>
+<p>Default <code>"300"</code></p>
+<p>Number of seconds after which an idle TCP connection is cleaned up</p>
+</dd>
+<dt><mark><code>-envoy.listen.drain-type</code></mark></dt>
+<dd>
+<p>Default <code>"default"</code></p>
+<p>Method used to drain upstream connections. Valid options are 'default' and 'modified'</p>
+</dd>
+<dt><mark><code>-envoy.listen.per-conn-buf-limit</code></mark></dt>
+<dd>
+<p>Default <code>"1049000"</code></p>
+<p>Soft limit in bytes on size of the listener’s new connection read and write buffers</p>
 </dd>
 <dt><mark><code>-envoy.listen.port</code></mark></dt>
 <dd>
 <p>Default <code>"9292"</code></p>
 <p>Port used by Envoy Listener</p>
+</dd>
+<dt><mark><code>-envoy.listen.tcp-fast-open-q-length</code></mark></dt>
+<dd>
+<p>Default <code>"-1"</code></p>
+<p>TFO queue length. -1 means the setting is not modified, 0 means TFO is disabled and 1 and higher value means TFO is enabled with queue size set to this value</p>
+</dd>
+<dt><mark><code>-envoy.listen.transparent</code></mark></dt>
+<dd>
+<p>Default <code>"true"</code></p>
+<p>Set the listener as transparent socket</p>
 </dd>
 <dt><mark><code>-envoy.tracing.enabled</code></mark></dt>
 <dd>

@@ -1,29 +1,5 @@
 # Configuration
 
-Flightpath has several configuration options you might want to tweak to get it working in your specific environment.
-
-| Option |  Description |
-|:--------|:------------|
-| `-consul.host` |  Network address to a consul agent |
-| `-consul.port` |  Port on which the consul agent is listening |
-| `-consul.proto` |  Protocol used to connect with consul agent |
-| `-consul.token` |  Consul token to use |
-| `-debug` |  Start debug HTTP server on loopback interface |
-| `-debug.port` |  Network port to use for debug HTTP server |
-| `-dogstatsd` |  Enable publishing metrics to dogstatsd agent |
-| `-dogstatsd.addr` |  Address of the dogstatsd agent |
-| `-dogstatsd.namespace` |  Metrics namespace for dogstatsd |
-| `-dogstatsd.port` |  Port of the dogstatsd agent |
-| `-node-name` |  Named of the Envoy node |
-| `-envoy.access-logs` |  Path to the file where envoy will write listener access logs |
-| `-envoy.listen.port` |  Port used by Envoy Listener |
-| `-log.format` |  Format of the log message. Valid options are json and plain |
-| `-log.level` |  Set log verbosity. Valid options are trace, debug, error, warn, info, fatal and panic |
-| `-name` |  Name used to register the flightpath service in Consul Catalog |
-| `-port` |  Port for XDS listener |
-| `-version` |  Show version information |
-
-
 Flightpath primarily provides configuration to Envoy and the Envoy XDS protocol requires some information to be shared
 between Envoy and the XDS server. 
 
