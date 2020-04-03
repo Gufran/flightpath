@@ -4,7 +4,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.network "forwarded_port", guest: 4646, host: 4646
   config.vm.network "forwarded_port", guest: 8500, host: 8500
-  config.vm.network "forwarded_port", guest: 9292, host: 80
+  config.vm.network "forwarded_port", guest: 9292, host: 9292
   config.vm.network "forwarded_port", guest: 9998, host: 9998
   config.vm.network "forwarded_port", guest: 9901, host: 9901
 
@@ -28,12 +28,15 @@ Vagrant.configure("2") do |config|
     curl -s https://releases.hashicorp.com/consul/1.7.2/consul_1.7.2_linux_amd64.zip -o /tmp/consul.zip
     unzip /tmp/consul.zip -d /usr/bin
 
+    useradd envoy -U -M
     curl -s -L https://getenvoy.io/cli | bash -s -- -b /usr/local/bin
     /usr/local/bin/getenvoy fetch standard:1.13.1
     mv $HOME/.getenvoy/builds/standard/1.13.1/linux_glibc/bin/envoy /usr/bin/envoy
     mkdir /var/log/envoy
-    chown vagrant:vagrant /var/log/envoy
     cp /vagrant/internal/testing/config/envoy.yaml /etc/envoy.yaml
+    chown envoy:envoy /var/log/envoy /etc/envoy.yaml
+
+    setcap cap_net_bind_service,cap_net_admin=+ep /usr/bin/envoy
 
     chmod +x /usr/bin/consul /usr/bin/nomad /usr/bin/envoy
 
@@ -55,7 +58,7 @@ Vagrant.configure("2") do |config|
     cp /vagrant/internal/testing/config/nomad.service /usr/lib/systemd/system/nomad.service
 
     systemctl enable consul envoy nomad
-    systemct start consul envoy nomad
+    systemctl start consul envoy nomad
   SHELL
 
   config.vm.provision "flightpath", type: "shell", after: "bootstrap", inline: <<-SHELL

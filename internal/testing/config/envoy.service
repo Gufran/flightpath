@@ -2,8 +2,8 @@
 Requires = network-online.target
 
 [Service]
-User = vagrant
-Group = vagrant
+User = envoy
+Group = envoy
 KillMode = process
 
 ExecStart = /usr/bin/envoy --log-level DEBUG --config-path /etc/envoy.yaml
