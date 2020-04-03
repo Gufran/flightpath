@@ -17,7 +17,7 @@ if ! command -v "${flightpath_exec}" >/dev/null 2>&1; then
   else
     read -r -n 1 -p "flightpath executable is not available. Do you want to build from source? [y/N] " build_from_source
     [ "${build_from_source}" != 'y' ] && die "flightpath executable is not available"
-    /bin/bash build.sh whatever
+    /bin/bash build.sh native
   fi
 fi
 
@@ -86,7 +86,7 @@ echo "Sidecar started with process ID ${sidecar_pid}"
 processes="${processes} ${sidecar_pid}"
 
 echo "Starting Flightpath. Logs will be streamed to ${flightpath_logs_file#${PWD}/}"
-"${flightpath_exec}" -metrics.sink=stderr -envoy.access-logs "${envoy_access_logs}" >"${flightpath_logs_file}" 2>&1 &
+"${flightpath_exec}" -metrics.sink=stderr -envoy.http.access-logs "${envoy_access_logs}" >"${flightpath_logs_file}" 2>&1 &
 flightpath_pid="${!}"
 echo "Flightpath started with process ID ${flightpath_pid}"
 processes="${processes} ${flightpath_pid}"
