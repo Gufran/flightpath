@@ -13,7 +13,7 @@
         <meta name="description" content="Flightpath Edge Proxy Documentation">
       
       
-        <link rel="canonical" href="https://docs.flightpath.xyz/usage/">
+        <link rel="canonical" href="https://docs.flightpath.xyz/envoy-configuration/">
       
       
         <meta name="author" content="Mohammad Gufran">
@@ -42,7 +42,7 @@
     
     
       
-        <title>Usage - Flightpath</title>
+        <title>Envoy Configuration - Flightpath</title>
       
     
     
@@ -91,7 +91,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
     
-      <a href="#usage" tabindex="1" class="md-skip">
+      <a href="#envoy-configuration" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -117,7 +117,7 @@
             </span>
             <span class="md-header-nav__topic">
               
-                Usage
+                Envoy Configuration
               
             </span>
           
@@ -262,18 +262,6 @@
       
       
 
-
-  <li class="md-nav__item">
-    <a href="../envoy-configuration/" title="Envoy Configuration" class="md-nav__link">
-      Envoy Configuration
-    </a>
-  </li>
-
-    
-      
-      
-      
-
   
 
 
@@ -284,10 +272,51 @@
       
     
     
-    <a href="./" title="Usage" class="md-nav__link md-nav__link--active">
-      Usage
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Envoy Configuration
+      </label>
+    
+    <a href="./" title="Envoy Configuration" class="md-nav__link md-nav__link--active">
+      Envoy Configuration
     </a>
     
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#cluster-configuration" class="md-nav__link">
+    Cluster Configuration
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../usage/" title="Usage" class="md-nav__link">
+      Usage
+    </a>
   </li>
 
     
@@ -344,6 +373,22 @@
     
   
   
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#cluster-configuration" class="md-nav__link">
+    Cluster Configuration
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -354,171 +399,85 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/Gufran/flightpath/edit/master/docs/usage.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
+                  <a href="https://github.com/Gufran/flightpath/edit/master/docs/envoy-configuration.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
                 
                 
-                <h1 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h1>
-<p>Following command line flags can be used to configure flightpath</p>
+                <h1 id="envoy-configuration">Envoy Configuration<a class="headerlink" href="#envoy-configuration" title="Permanent link">&para;</a></h1>
+<p>Flightpath can configure Envoy Upstream Cluster and Route definition using the service metadata attribute.
+Following metadata attributes can be set on consul service:</p>
+<h2 id="cluster-configuration">Cluster Configuration<a class="headerlink" href="#cluster-configuration" title="Permanent link">&para;</a></h2>
 <dl>
-<dt><mark><code>-consul.host</code></mark></dt>
+<dt><mark><code>flightpath-cluster-conn_timeout</code></mark></dt>
 <dd>
-<p>Default <code>"127.0.0.1"</code></p>
-<p>Network address to a consul agent</p>
+<p>Integer<br />
+ Default: <code>10 seconds</code><br />
+ Used to set the <code>connect_timeout</code> attribute on <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v2/api/v2/cluster.proto">Cluster</a> configuration.</p>
 </dd>
-<dt><mark><code>-consul.port</code></mark></dt>
+<dt><mark><code>flightpath-cluster-per_conn_buf_limit_bytes</code></mark></dt>
 <dd>
-<p>Default <code>"8500"</code></p>
-<p>Port on which the consul agent is listening</p>
+<p>Integer<br />
+ Default: <code>32768</code><br />
+ Used to set the <code>per_connection_buffer_limit_bytes</code> attribute on <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v2/api/v2/cluster.proto">Cluster</a> configuration.</p>
 </dd>
-<dt><mark><code>-consul.proto</code></mark></dt>
+<dt><mark><code>flightpath-cluster-max_req_per_conn</code></mark></dt>
 <dd>
-<p>Default <code>"http"</code></p>
-<p>Protocol used to connect with consul agent</p>
+<p>Integer<br />
+ Default: <code>10,000</code><br />
+ Used to set the <code>max_requests_per_connection</code> attribute on <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v2/api/v2/cluster.proto">Cluster</a> configuration.</p>
 </dd>
-<dt><mark><code>-consul.token</code></mark></dt>
+<dt><mark><code>flightpath-cluster-tcp_keepalive_probes</code></mark></dt>
 <dd>
-<p>Default <code>""</code></p>
-<p>Consul token to use</p>
+<p>Integer<br />
+ Default: <code>9</code>
+ Used to configure <code>upstream_connection_options.tcp_keepalive.keepalive_probes</code> attribute on <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v2/api/v2/cluster.proto">Cluster</a></p>
 </dd>
-<dt><mark><code>-debug</code></mark></dt>
+<dt><mark><code>flightpath-cluster-tcp_keepalive_time</code></mark></dt>
 <dd>
-<p>Default <code>"false"</code></p>
-<p>Start debug HTTP server on loopback interface</p>
+<p>Integer<br />
+ Default: <code>300 Seconds</code>
+ Used to configure <code>upstream_connection_options.tcp_keepalive.keepalive_time</code> attribute on <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v2/api/v2/cluster.proto">Cluster</a></p>
 </dd>
-<dt><mark><code>-debug.port</code></mark></dt>
+<dt><mark><code>flightpath-cluster-tcp_keepalive_interval</code></mark></dt>
 <dd>
-<p>Default <code>"7180"</code></p>
-<p>Network port to use for debug HTTP server</p>
+<p>Integer<br />
+ Default: <code>90 Seconds</code>
+ Used to configure <code>upstream_connection_options.tcp_keepalive.keepalive_interval</code> attribute on <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v2/api/v2/cluster.proto">Cluster</a></p>
 </dd>
-<dt><mark><code>-dogstatsd.addr</code></mark></dt>
+<dt><mark><code>flightpath-retry-on</code></mark></dt>
 <dd>
-<p>Default <code>"127.0.0.1"</code></p>
-<p>Address of the dogstatsd agent</p>
+<p>String<br />
+ Default: <code>""</code>
+ Used to configure <code>retry_on</code> attribute on route's <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v3/config/route/v3/route_components.proto.html?highlight=retry_policy#envoy-v3-api-msg-config-route-v3-retrypolicy">RetryPolicy</a>  </p>
+<p>Valid policies are <code>5xx</code>, <code>gateway-error</code>, <code>reset</code>, <code>connect-failure</code>, <code>retriable-4xx</code>, <code>refused-stream</code>, <code>retriable-status-codes</code>, and <code>retriable-headers</code>.<br />
+ Multiple policies can be specified by using a <code>,</code> (comma) delimited list.</p>
 </dd>
-<dt><mark><code>-dogstatsd.namespace</code></mark></dt>
+<dt><mark><code>flightpath-retry-attempts</code></mark></dt>
 <dd>
-<p>Default <code>"flightpath"</code></p>
-<p>Metrics namespace for dogstatsd</p>
+<p>Integer<br />
+ Default: <code>3</code><br />
+ Used to configure <code>num_retries</code> attribute on route's <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v3/config/route/v3/route_components.proto.html?highlight=retry_policy#envoy-v3-api-msg-config-route-v3-retrypolicy">RetryPolicy</a>  </p>
+<p>This setting is ignored if <code>flightpath-retry-on</code> is not set.</p>
 </dd>
-<dt><mark><code>-dogstatsd.port</code></mark></dt>
+<dt><mark><code>flightpath-retry-per_try_timeout</code></mark></dt>
 <dd>
-<p>Default <code>"8125"</code></p>
-<p>Port of the dogstatsd agent</p>
+<p>Integer<br />
+ Default: <code>5</code><br />
+ Used to configure <code>per_try_timeout</code> attribute on route's <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v3/config/route/v3/route_components.proto.html?highlight=retry_policy#envoy-v3-api-msg-config-route-v3-retrypolicy">RetryPolicy</a>  </p>
+<p>This setting is ignored if <code>flightpath-retry-on</code> is not set.</p>
 </dd>
-<dt><mark><code>-envoy.http.access-logs</code></mark></dt>
+<dt><mark><code>flightpath-retry-backoff_base_interval</code></mark></dt>
 <dd>
-<p>Default <code>"/var/log/envoy/access.log"</code></p>
-<p>Path to the file where envoy will write listener access logs</p>
+<p>Integer<br />
+ Default: <code>1</code><br />
+ Used to configure <code>retry_back_off.base_interval</code> attribute on route's <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v3/config/route/v3/route_components.proto.html?highlight=retry_policy#envoy-v3-api-msg-config-route-v3-retrypolicy">RetryPolicy</a>  </p>
+<p>This setting is ignored if <code>flightpath-retry-on</code> is not set.</p>
 </dd>
-<dt><mark><code>-envoy.http.delayed-close-timeout</code></mark></dt>
+<dt><mark><code>flightpath-retry-backoff_max_interval</code></mark></dt>
 <dd>
-<p>Default <code>"1"</code></p>
-<p>Number of seconds to wait for closing the connection after peer closes from their side</p>
-</dd>
-<dt><mark><code>-envoy.http.drain-timeout</code></mark></dt>
-<dd>
-<p>Default <code>"30"</code></p>
-<p>Number of seconds to wait for HTTP/2 to shut down after sending GOAWAY frame</p>
-</dd>
-<dt><mark><code>-envoy.http.idle-timeout</code></mark></dt>
-<dd>
-<p>Default <code>"15"</code></p>
-<p>Number of seconds after which an idle connection is cleaned up</p>
-</dd>
-<dt><mark><code>-envoy.http.preserve-req-id</code></mark></dt>
-<dd>
-<p>Default <code>"true"</code></p>
-<p>Preserve external request ID if set in headers</p>
-</dd>
-<dt><mark><code>-envoy.http.req-timeout</code></mark></dt>
-<dd>
-<p>Default <code>"30"</code></p>
-<p>Number of seconds to wait for the entire request to be received</p>
-</dd>
-<dt><mark><code>-envoy.http.stream-idle-timeout</code></mark></dt>
-<dd>
-<p>Default <code>"300"</code></p>
-<p>Number of seconds after which an idle TCP connection is cleaned up</p>
-</dd>
-<dt><mark><code>-envoy.listen.drain-type</code></mark></dt>
-<dd>
-<p>Default <code>"default"</code></p>
-<p>Method used to drain upstream connections. Valid options are 'default' and 'modified'</p>
-</dd>
-<dt><mark><code>-envoy.listen.per-conn-buf-limit</code></mark></dt>
-<dd>
-<p>Default <code>"1049000"</code></p>
-<p>Soft limit in bytes on size of the listener’s new connection read and write buffers</p>
-</dd>
-<dt><mark><code>-envoy.listen.port</code></mark></dt>
-<dd>
-<p>Default <code>"9292"</code></p>
-<p>Port used by Envoy Listener</p>
-</dd>
-<dt><mark><code>-envoy.listen.tcp-fast-open-q-length</code></mark></dt>
-<dd>
-<p>Default <code>"-1"</code></p>
-<p>TFO queue length. -1 means the setting is not modified, 0 means TFO is disabled and 1 and higher value means TFO is enabled with queue size set to this value</p>
-</dd>
-<dt><mark><code>-envoy.listen.transparent</code></mark></dt>
-<dd>
-<p>Default <code>"true"</code></p>
-<p>Set the listener as transparent socket</p>
-</dd>
-<dt><mark><code>-envoy.tracing.enabled</code></mark></dt>
-<dd>
-<p>Default <code>"false"</code></p>
-<p>Enable request tracing on envoy</p>
-</dd>
-<dt><mark><code>-envoy.tracing.op-name</code></mark></dt>
-<dd>
-<p>Default <code>"egress"</code></p>
-<p>Tracing operation name, valid values are 'ingress' or 'egress'</p>
-</dd>
-<dt><mark><code>-envoy.tracing.verbose</code></mark></dt>
-<dd>
-<p>Default <code>"false"</code></p>
-<p>Add verbose information to traces</p>
-</dd>
-<dt><mark><code>-log.format</code></mark></dt>
-<dd>
-<p>Default <code>"json"</code></p>
-<p>Format of the log message. Valid options are json and plain</p>
-</dd>
-<dt><mark><code>-log.level</code></mark></dt>
-<dd>
-<p>Default <code>"INFO"</code></p>
-<p>Set log verbosity. Valid options are trace, debug, error, warn, info, fatal and panic</p>
-</dd>
-<dt><mark><code>-metrics.runtime</code></mark></dt>
-<dd>
-<p>Default <code>"true"</code></p>
-<p>Expose runtime stats on memory and CPU</p>
-</dd>
-<dt><mark><code>-metrics.sink</code></mark></dt>
-<dd>
-<p>Default <code>""</code></p>
-<p>Set the metrics sink. Valid options are 'dogstatsd' and 'stderr'</p>
-</dd>
-<dt><mark><code>-name</code></mark></dt>
-<dd>
-<p>Default <code>"flightpath"</code></p>
-<p>Name used to register the flightpath service in Consul Catalog</p>
-</dd>
-<dt><mark><code>-node-name</code></mark></dt>
-<dd>
-<p>Default <code>"flightpath-edge"</code></p>
-<p>Named of the Envoy node</p>
-</dd>
-<dt><mark><code>-port</code></mark></dt>
-<dd>
-<p>Default <code>"7171"</code></p>
-<p>Port for XDS listener</p>
-</dd>
-<dt><mark><code>-version</code></mark></dt>
-<dd>
-<p>Default <code>"false"</code></p>
-<p>Show version information</p>
+<p>Integer<br />
+ Default: <code>6</code><br />
+ Used to configure <code>retry_back_off.max_interval</code> attribute on route's <a href="https://www.envoyproxy.io/docs/envoy/v1.13.1/api-v3/config/route/v3/route_components.proto.html?highlight=retry_policy#envoy-v3-api-msg-config-route-v3-retrypolicy">RetryPolicy</a>  </p>
+<p>This setting is ignored if <code>flightpath-retry-on</code> is not set.</p>
 </dd>
 </dl>
                 
@@ -542,7 +501,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../envoy-configuration/" title="Envoy Configuration" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../route-discovery/" title="Route Discovery" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -551,19 +510,19 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Envoy Configuration
+                Route Discovery
               </span>
             </div>
           </a>
         
         
-          <a href="../configuration/" title="Configuration" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../usage/" title="Usage" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Configuration
+                Usage
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">
