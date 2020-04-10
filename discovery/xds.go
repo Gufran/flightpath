@@ -376,6 +376,16 @@ func buildFilterChains(envoyConfig *EnvoyConfig) ([]*listener.FilterChain, error
 		DrainTimeout:              &duration.Duration{Seconds: envoyConfig.HttpDrainTimeout},
 		DelayedCloseTimeout:       &duration.Duration{Seconds: envoyConfig.HttpDelayedCloseTimeout},
 		PreserveExternalRequestId: envoyConfig.HttpPreserveExtReqId,
+		UpgradeConfigs: []*hcm.HttpConnectionManager_UpgradeConfig{
+			{
+				UpgradeType: "websocket",
+				Enabled:     &wrappers.BoolValue{Value: true},
+			},
+			{
+				UpgradeType: "h2c",
+				Enabled:     &wrappers.BoolValue{Value: true},
+			},
+		},
 		RouteSpecifier: &hcm.HttpConnectionManager_Rds{
 			Rds: &hcm.Rds{
 				RouteConfigName: "upstream",
@@ -557,7 +567,7 @@ func (v *vhostPool) collect(proxyPort int) []*route.VirtualHost {
 	for _, vh := range v.vhs {
 		for domain, routes := range vh.routes {
 			target := &route.VirtualHost{
-				Name:                       "vh-" + domain,
+				Name: "vh-" + domain,
 				// TODO: Envoy fails to match the domain if the client
 				//   sends the Host header with port in it. for the time
 				//   we match on the bare domain as well as on the domain
